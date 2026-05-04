@@ -168,22 +168,35 @@ Provide the full analysis with all 5 sections (a through e)."""
 
 
 # ── PROGRESS TRACKER ─────────────────────────────────────────────────────────
+DEFAULT_MODULES = [
+    {'id': 'website', 'name': 'Marketing Website', 'desc': 'Landing page, demo, analyzer', 'default_status': 'live', 'phase': 'Phase 0', 'effort': 'Low', 'revenue_impact': 'Acquisition'},
+    {'id': 'gst', 'name': 'AI GST Assistant', 'desc': 'GSTR-1/GSTR-3B drafting, Gujarati reminders', 'default_status': 'next', 'phase': 'Phase 1', 'tier': 'Starter', 'effort': 'High', 'revenue_impact': '₹2,999×N'},
+    {'id': 'invoice', 'name': 'Smart Invoice Engine', 'desc': 'WhatsApp order → GST invoice → Tally sync', 'default_status': 'planned', 'phase': 'Phase 1', 'tier': 'Starter', 'effort': 'High', 'revenue_impact': 'Upsell'},
+    {'id': 'crm', 'name': 'Buyer/Supplier CRM', 'desc': 'Outstanding payments, AI follow-ups', 'default_status': 'planned', 'phase': 'Phase 2', 'tier': 'Growth', 'effort': 'Medium', 'revenue_impact': '₹7,999×N'},
+    {'id': 'compliance', 'name': 'Compliance Calendar', 'desc': 'TDS, advance tax, GST deadlines + WhatsApp alerts', 'default_status': 'planned', 'phase': 'Phase 2', 'tier': 'Growth', 'effort': 'Medium', 'revenue_impact': 'Retention'},
+    {'id': 'ca', 'name': 'CA Connect Marketplace', 'desc': 'Connect users to CAs, 20-30% revenue cut', 'default_status': 'planned', 'phase': 'Phase 3', 'tier': 'Enterprise', 'effort': 'Medium', 'revenue_impact': 'Marketplace'},
+    {'id': 'insights', 'name': 'Business Insights', 'desc': 'Monthly AI report in Gujarati/Hindi', 'default_status': 'planned', 'phase': 'Phase 3', 'tier': 'Enterprise', 'effort': 'Low', 'revenue_impact': '₹19,999×N'},
+]
+
+
 @api_router.get("/progress")
 async def get_progress():
-    modules = [
-        {'id': 'website', 'name': 'Marketing Website', 'desc': 'Landing page, demo, analyzer', 'status': 'live', 'priority': 0, 'effort': 'Low', 'revenue_impact': 'Acquisition'},
-        {'id': 'gst', 'name': 'AI GST Assistant', 'desc': 'GSTR-1/GSTR-3B drafting, Gujarati reminders', 'status': 'next', 'priority': 1, 'tier': 'Starter', 'effort': 'High', 'revenue_impact': '₹2,999×N'},
-        {'id': 'invoice', 'name': 'Smart Invoice Engine', 'desc': 'WhatsApp order → GST invoice → Tally sync', 'status': 'planned', 'priority': 2, 'tier': 'Starter', 'effort': 'High', 'revenue_impact': 'Upsell'},
-        {'id': 'crm', 'name': 'Buyer/Supplier CRM', 'desc': 'Outstanding payments, AI follow-ups', 'status': 'planned', 'priority': 3, 'tier': 'Growth', 'effort': 'Medium', 'revenue_impact': '₹7,999×N'},
-        {'id': 'compliance', 'name': 'Compliance Calendar', 'desc': 'TDS, advance tax, GST deadlines + WhatsApp alerts', 'status': 'planned', 'priority': 4, 'tier': 'Growth', 'effort': 'Medium', 'revenue_impact': 'Retention'},
-        {'id': 'ca', 'name': 'CA Connect Marketplace', 'desc': 'Connect users to CAs, 20-30% revenue cut', 'status': 'planned', 'priority': 5, 'tier': 'Enterprise', 'effort': 'Medium', 'revenue_impact': 'Marketplace'},
-        {'id': 'insights', 'name': 'Business Insights', 'desc': 'Monthly AI report in Gujarati/Hindi', 'status': 'planned', 'priority': 6, 'tier': 'Enterprise', 'effort': 'Low', 'revenue_impact': '₹19,999×N'},
-    ]
+    # Load persisted status overrides from DB
+    overrides = {}
+    async for doc in db.module_status.find({}, {'_id': 0}):
+        overrides[doc['module_id']] = doc.get('status')
+
+    modules = []
+    for m in DEFAULT_MODULES:
+        status = overrides.get(m['id'], m['default_status'])
+        modules.append({k: v for k, v in m.items() if k != 'default_status'} | {'status': status})
+
     live = len([m for m in modules if m['status'] == 'live'])
     total = len(modules)
     pct = round((live / total) * 100)
-    return {'modules': modules, 'completion_pct': pct, 'live_count': live, 'total': total,
-            'next_step': 'Build AI GST Assistant — Module 1 (Starter tier, highest revenue impact)'}
+    next_mod = next((m for m in modules if m['status'] == 'next'), None)
+    next_step = f"Build {next_mod['name']} — {next_mod.get('tier','')}" if next_mod else "All modules launched!"
+    return {'modules': modules, 'completion_pct': pct, 'live_count': live, 'total': total, 'next_step': next_step}
 
 
 @api_router.patch("/progress/{module_id}")
