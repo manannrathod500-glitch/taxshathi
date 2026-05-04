@@ -149,11 +149,8 @@ const WaitlistModal = ({ open, onClose, initialCount }) => {
 // ── LANDING PAGE ──────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [waitlistOpen, setWaitlistOpen] = useState(false);
-  const [waitlistCount, setWaitlistCount] = useState(500);
-
-  useEffect(() => {
-    axios.get(`${API}/waitlist/count`).then(r => setWaitlistCount(r.data.count + 487)).catch(() => {});
-  }, []);
+  // Hardcoded until backend is connected (avoids NaN on Vercel)
+  const waitlistCount = 488;
 
   return (
     <div className="min-h-screen bg-[#050505] font-body text-white">
