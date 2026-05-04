@@ -8,6 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useAuth } from '@/contexts/AuthContext';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -340,6 +341,7 @@ export default function InvoiceEngine() {
   const [orderText, setOrderText] = useState('');
   const [parsing, setParsing] = useState(false);
   const previewRef = useRef(null);
+  const { checkAILimits, incrementAICalls } = useAuth();
 
   const [seller, setSeller] = useState({
     name: 'TaxSathi Demo Traders',
@@ -384,7 +386,15 @@ export default function InvoiceEngine() {
     }
     setParsing(true);
     try {
+      if (!checkAILimits()) {
+        toast.error("AI usage limit reached! Please check your dashboard.");
+        setParsing(false);
+        return;
+      }
+      
       const parsed = await parseOrderWithAI(orderText, seller.state);
+      await incrementAICalls();
+      
       if (parsed?.buyer) {
         setBuyer(b => ({
           name: parsed.buyer.name || b.name,

@@ -6,6 +6,7 @@ import {
   Sparkles, Loader2, Globe, AlertCircle, Download, Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -175,6 +176,7 @@ export default function GSTAssistant() {
   ]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const { checkAILimits, incrementAICalls } = useAuth();
 
   const t = T[language];
 
@@ -215,9 +217,14 @@ export default function GSTAssistant() {
       const { lines, totals } = computeGST(validEntries, businessState);
       let ai = { summary: '', checklist: [], tips: [] };
       try {
-        ai = await fetchAIInsights({
-          language, businessType, businessState, totals, entryCount: lines.length,
-        });
+        if (!checkAILimits()) {
+          toast.error("AI usage limit reached! Please check your dashboard.");
+        } else {
+          ai = await fetchAIInsights({
+            language, businessType, businessState, totals, entryCount: lines.length,
+          });
+          await incrementAICalls();
+        }
       } catch (err) {
         console.error(err);
         toast.error('AI insights unavailable — showing calculations only.');

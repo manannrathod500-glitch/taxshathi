@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Shield, Eye, EyeOff, ArrowLeft, User, Mail, Phone, Lock } from 'lucide-react';
+import { Shield, Eye, EyeOff, ArrowLeft, User, Mail, Phone, Lock, Briefcase } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -8,9 +8,15 @@ const AuthPage = ({ mode: initialMode }) => {
   const [searchParams] = useSearchParams();
   const mode = initialMode || (searchParams.get('mode') === 'register' ? 'register' : initialMode);
   const refCode = searchParams.get('ref') || '';
-  const planFromUrl = searchParams.get('plan') || '';
 
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', referral_code: refCode });
+  const [form, setForm] = useState({ 
+    name: '', 
+    business_name: '',
+    email: '', 
+    phone: '', 
+    password: '', 
+    referral_code: refCode 
+  });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
@@ -25,16 +31,26 @@ const AuthPage = ({ mode: initialMode }) => {
       if (mode === 'login') {
         await login(form.email, form.password);
         toast.success('Welcome back!');
+        navigate('/dashboard');
       } else {
         if (!form.name.trim()) { toast.error('Name is required'); setLoading(false); return; }
+        if (!form.business_name.trim()) { toast.error('Business name is required'); setLoading(false); return; }
         if (!form.phone.trim()) { toast.error('Phone is required'); setLoading(false); return; }
         if (form.password.length < 6) { toast.error('Password must be at least 6 characters'); setLoading(false); return; }
-        await register(form.name, form.email, form.phone, form.password, form.referral_code);
+        
+        await register(
+          form.name, 
+          form.business_name,
+          form.phone, 
+          form.email, 
+          form.password, 
+          form.referral_code
+        );
         toast.success('Account created! You get 10 free questions.');
+        navigate('/dashboard');
       }
-      navigate('/dashboard');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Something went wrong. Please try again.');
+      toast.error(err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -67,7 +83,7 @@ const AuthPage = ({ mode: initialMode }) => {
                 ? 'Login to your GST advisor dashboard'
                 : refCode
                   ? `Referred by a friend — you get 5 bonus questions!`
-                  : '10 free questions, no credit card needed'}
+                  : '10 free AI checks per month, no credit card needed'}
             </p>
           </div>
 
@@ -85,6 +101,18 @@ const AuthPage = ({ mode: initialMode }) => {
                         data-testid="register-name-input"
                         type="text" value={form.name} onChange={e => update('name', e.target.value)}
                         required placeholder="Ramesh Patel"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-green-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-gray-300 text-sm mb-1.5 block">Business Name</label>
+                    <div className="relative">
+                      <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <input
+                        data-testid="register-business-name-input"
+                        type="text" value={form.business_name} onChange={e => update('business_name', e.target.value)}
+                        required placeholder="ABC Enterprises"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-green-500 transition-colors"
                       />
                     </div>
@@ -139,10 +167,9 @@ const AuthPage = ({ mode: initialMode }) => {
                   <input
                     data-testid="register-referral-input"
                     type="text" value={form.referral_code} onChange={e => update('referral_code', e.target.value)}
-                    placeholder="Enter referral code for bonus questions"
+                    placeholder="Enter referral code"
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-green-500 transition-colors"
                   />
-                  {refCode && <p className="text-green-400 text-xs mt-1">Referral code applied! You'll get 5 bonus free questions.</p>}
                 </div>
               )}
 

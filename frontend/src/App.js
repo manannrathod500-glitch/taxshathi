@@ -7,6 +7,9 @@ import ModuleAnalyzer from '@/pages/ModuleAnalyzer';
 import ProgressTracker from '@/pages/ProgressTracker';
 import GSTAssistant from '@/pages/GSTAssistant';
 import InvoiceEngine from '@/pages/InvoiceEngine';
+import AuthPage from '@/pages/AuthPage';
+import Dashboard from '@/pages/Dashboard';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import '@/App.css';
 
 // Scroll reveal observer
@@ -23,6 +26,13 @@ const useScrollReveal = () => {
   }, []);
 };
 
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center">Loading...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+};
+
 function AppWithReveal() {
   useScrollReveal();
   return (
@@ -31,8 +41,16 @@ function AppWithReveal() {
       <Route path="/demo" element={<DemoPage />} />
       <Route path="/analyzer" element={<ModuleAnalyzer />} />
       <Route path="/progress" element={<ProgressTracker />} />
-      <Route path="/gst-assistant" element={<GSTAssistant />} />
-      <Route path="/invoice" element={<InvoiceEngine />} />
+      
+      {/* Auth Routes */}
+      <Route path="/login" element={<AuthPage mode="login" />} />
+      <Route path="/register" element={<AuthPage mode="register" />} />
+      
+      {/* Protected Routes */}
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/gst-assistant" element={<ProtectedRoute><GSTAssistant /></ProtectedRoute>} />
+      <Route path="/invoice" element={<ProtectedRoute><InvoiceEngine /></ProtectedRoute>} />
+      
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -40,16 +58,18 @@ function AppWithReveal() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppWithReveal />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: { background: '#0a0a0a', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '14px' },
-          success: { iconTheme: { primary: '#22c55e', secondary: '#000' } }
-        }}
-      />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppWithReveal />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: { background: '#0a0a0a', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '14px' },
+            success: { iconTheme: { primary: '#22c55e', secondary: '#000' } }
+          }}
+        />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

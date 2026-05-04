@@ -1,64 +1,154 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { supabase } from '../lib/supabaseClient';
+import toast from 'react-hot-toast';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('taxsaathi_token');
 
-  const authHeaders = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem('taxsaathi_token')}` }
-  });
-
-  const fetchMe = useCallback(async () => {
-    const t = localStorage.getItem('taxsaathi_token');
-    if (!t) { setLoading(false); return; }
+  const fetchProfile = useCallback(async (userId) => {
     try {
-      const res = await axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${t}` } });
-      setUser(res.data);
-    } catch {
-      localStorage.removeItem('taxsaathi_token');
-    } finally {
-      setLoading(false);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching profile:", error);
+      } else {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error(err);
     }
   }, []);
 
-  useEffect(() => { fetchMe(); }, [fetchMe]);
+  useEffect(() => {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for changes on auth state (sign in, sign out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session?.user) {
+          setUser(session.user);
+          fetchProfile(session.user.id);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [fetchProfile]);
 
   const login = async (email, password) => {
-    const res = await axios.post(`${API}/auth/login`, { email, password });
-    localStorage.setItem('taxsaathi_token', res.data.token);
-    setUser(res.data.user);
-    return res.data;
-  };
-
-  const register = async (name, email, phone, password, referralCode) => {
-    const res = await axios.post(`${API}/auth/register`, {
-      name, email, phone, password, referral_code: referralCode || null
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
-    localStorage.setItem('taxsaathi_token', res.data.token);
-    setUser(res.data.user);
-    return res.data;
+    if (error) throw error;
+    return data;
   };
 
-  const logout = () => {
-    localStorage.removeItem('taxsaathi_token');
+  const register = async (name, business_name, phone, email, password, referralCode) => {
+    // Register user via Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          business_name,
+          phone,
+          referral_code: referralCode,
+        }
+      }
+    });
+    
+    if (error) throw error;
+    
+    // Insert into profiles if signup successful
+    if (data?.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          { 
+            id: data.user.id, 
+            name, 
+            business_name, 
+            phone, 
+            email, 
+            referral_code: referralCode,
+            ai_calls_this_month: 0 
+          }
+        ]);
+        
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        // We do not throw here so the user is still signed in, but we log the error.
+        // Usually, trigger should create the profile, but we'll do it manually to be safe or assuming no triggers.
+      } else {
+        await fetchProfile(data.user.id);
+      }
+    }
+    
+    return data;
+  };
+
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
     setUser(null);
+    setProfile(null);
   };
 
-  const refreshUser = async () => {
-    try {
-      const res = await axios.get(`${API}/auth/me`, authHeaders());
-      setUser(res.data);
-      return res.data;
-    } catch { logout(); }
+  const checkAILimits = () => {
+    if (!profile) return false;
+    return profile.ai_calls_this_month < 10;
+  };
+
+  const incrementAICalls = async () => {
+    if (!user || !profile) return;
+    
+    const newCount = (profile.ai_calls_this_month || 0) + 1;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ ai_calls_this_month: newCount })
+      .eq('id', user.id);
+      
+    if (error) {
+      console.error("Failed to increment AI calls:", error);
+    } else {
+      setProfile(prev => ({ ...prev, ai_calls_this_month: newCount }));
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, token, login, register, logout, refreshUser, API, authHeaders }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      login, 
+      register, 
+      logout,
+      checkAILimits,
+      incrementAICalls
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -18,7 +18,7 @@ const PLANS = {
 };
 
 export default function Dashboard() {
-  const { user, logout, refreshUser, authHeaders } = useAuth();
+  const { user, profile, logout, checkAILimits } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -36,9 +36,9 @@ export default function Dashboard() {
   const [subscribeLoading, setSubscribeLoading] = useState(false);
   const chatEndRef = useRef(null);
 
-  const questionsUsed = user?.free_questions_used || 0;
-  const bonusQ = user?.bonus_questions || 0;
-  const planFree = user?.plan === 'free';
+  const questionsUsed = profile?.ai_calls_this_month || 0;
+  const bonusQ = profile?.bonus_questions || 0;
+  const planFree = profile?.plan !== 'pro' && profile?.plan !== 'premium';
   const totalFreeAvailable = planFree ? Math.max(0, (10 - questionsUsed) + bonusQ) : -1;
 
   const scrollToBottom = () => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,14 +57,14 @@ export default function Dashboard() {
 
   const loadHistory = async () => {
     try {
-      const res = await axios.get(`${API}/conversations`, authHeaders());
+      const res = await axios.get(`${API}/conversations`);
       setHistory(res.data);
     } catch { toast.error('Could not load history'); }
   };
 
   const loadReferral = async () => {
     try {
-      const res = await axios.get(`${API}/referral/stats`, authHeaders());
+      const res = await axios.get(`${API}/referral/stats`);
       setReferralStats(res.data);
     } catch { toast.error('Could not load referral stats'); }
   };
@@ -76,13 +76,15 @@ export default function Dashboard() {
     setMessages(prev => [...prev, { role: 'user', text }]);
     setChatLoading(true);
     try {
-      const res = await axios.post(`${API}/chat/advisor`, { message: text, session_id: sessionId }, authHeaders());
-      setMessages(prev => [...prev, { role: 'ai', text: res.data.response }]);
-      if (res.data.questions_remaining === 0 && planFree) setShowPaywall(true);
-      if (res.data.questions_remaining <= 2 && res.data.questions_remaining > 0 && planFree) {
-        toast(`Only ${res.data.questions_remaining} free questions left!`, { icon: '⚠️' });
+      // Ensure AI limit is checked
+      if (!checkAILimits()) {
+        setShowPaywall(true);
+        setChatLoading(false);
+        return;
       }
-      await refreshUser();
+      const res = await axios.post(`${API}/chat/advisor`, { message: text, session_id: sessionId });
+      setMessages(prev => [...prev, { role: 'ai', text: res.data.response }]);
+      // We don't check res.data.questions_remaining since we rely on our profile now
     } catch (err) {
       if (err.response?.status === 402) {
         setShowPaywall(true);
@@ -97,8 +99,8 @@ export default function Dashboard() {
   const handleSubscribe = async (plan) => {
     setSubscribeLoading(true);
     try {
-      await axios.post(`${API}/subscribe`, { plan, payment_id: `mock_${Date.now()}` }, authHeaders());
-      await refreshUser();
+      const res = await axios.post(`${API}/subscribe`, { plan, payment_id: `mock_${Date.now()}` });
+      // In a real app we would update the profile in Supabase here
       setShowPaywall(false);
       toast.success(`Subscribed to ${PLANS[plan]?.name} plan! Unlimited questions unlocked.`);
     } catch (err) {
@@ -171,8 +173,8 @@ export default function Dashboard() {
             </button>
           )}
           <div className="hidden sm:block text-right">
-            <div className="text-sm font-medium text-gray-900">{user?.name}</div>
-            <div className="text-xs text-gray-400">{user?.email}</div>
+            <div className="text-sm font-medium text-gray-900">{profile?.name || user?.email}</div>
+            <div className="text-xs text-gray-400">{profile?.business_name || 'Business'}</div>
           </div>
           <button data-testid="logout-btn" onClick={() => { logout(); navigate('/'); }} className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50">
             <LogOut size={18} />
@@ -183,7 +185,7 @@ export default function Dashboard() {
       {/* ── WELCOME BANNER ── */}
       <div className="bg-gradient-to-r from-green-600 to-emerald-700 text-white px-4 md:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
-          <span className="font-semibold">Namaste, {user?.name?.split(' ')[0]}! </span>
+          <span className="font-semibold">Namaste, {profile?.name?.split(' ')[0] || user?.email}! </span>
           {planFree
             ? <span className="text-green-100 text-sm">Free plan — <strong className="text-white">{totalFreeAvailable}/10</strong> questions remaining</span>
             : <span className="text-green-100 text-sm">{user?.plan?.toUpperCase()} plan — {daysLeft !== null ? `${daysLeft} days left` : 'Active'}</span>}
