@@ -28,7 +28,7 @@ const Navbar = ({ onOpenWaitlist }) => {
           <span className="font-display font-bold text-white text-base">TaxSathi AI</span>
         </Link>
         <div className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
-          {[['#modules', 'Modules'], ['#pricing', 'Pricing'], ['/gst-assistant', 'GST Assistant'], ['/demo', 'AI Demo'], ['/progress', 'Progress']].map(([href, label]) => (
+          {[['#modules', 'Modules'], ['#pricing', 'Pricing'], ['/gst-assistant', 'GST Assistant'], ['/invoice', 'Invoice'], ['/demo', 'AI Demo']].map(([href, label]) => (
             href.startsWith('#')
               ? <a key={label} href={href} className="hover:text-white transition-colors duration-200">{label}</a>
               : <Link key={label} to={href} className="hover:text-white transition-colors duration-200">{label}</Link>
@@ -46,7 +46,7 @@ const Navbar = ({ onOpenWaitlist }) => {
       </div>
       {menuOpen && (
         <div className="md:hidden bg-[#050505] border-t border-white/8 px-5 py-4 space-y-3">
-          {[['#modules', 'Modules'], ['#pricing', 'Pricing'], ['/gst-assistant', 'GST Assistant'], ['/demo', 'AI Demo'], ['/progress', 'Progress'], ['/analyzer', 'Module Analyzer']].map(([href, label]) => (
+          {[['#modules', 'Modules'], ['#pricing', 'Pricing'], ['/gst-assistant', 'GST Assistant'], ['/invoice', 'Invoice'], ['/demo', 'AI Demo'], ['/progress', 'Progress'], ['/analyzer', 'Module Analyzer']].map(([href, label]) => (
             href.startsWith('#')
               ? <a key={label} href={href} onClick={() => setMenuOpen(false)} className="block text-zinc-400 hover:text-white text-sm">{label}</a>
               : <Link key={label} to={href} onClick={() => setMenuOpen(false)} className="block text-zinc-400 hover:text-white text-sm">{label}</Link>
@@ -271,19 +271,22 @@ export default function LandingPage() {
               </div>
             </Link>
             {/* Invoice Engine */}
-            <div className="ts-card p-6 flex flex-col justify-between group hover:border-[#60a5fa]/30 transition-all duration-300">
+            <Link to="/invoice" data-testid="modules-invoice-card" className="ts-card p-6 flex flex-col justify-between group hover:border-[#60a5fa]/30 transition-all duration-300 cursor-pointer">
               <div>
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-9 h-9 bg-[#60a5fa]/10 border border-[#60a5fa]/20 rounded-xl flex items-center justify-center">
                     <Receipt size={16} style={{ color: '#60a5fa' }} />
                   </div>
-                  <span className="badge-live mono-label px-2.5 py-1 rounded-full text-[10px]">MVP</span>
+                  <span className="badge-live mono-label px-2.5 py-1 rounded-full text-[10px]">MVP — Try Now</span>
                 </div>
                 <div className="text-white font-semibold text-base mb-2 font-display">Smart Invoice Engine</div>
                 <p className="text-zinc-500 text-xs leading-relaxed">WhatsApp order → GST invoice → buyer → Tally sync. Fully automated.</p>
               </div>
-              <div className="text-zinc-600 text-xs mt-3 pt-3 border-t border-white/6">Starter tier</div>
-            </div>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/6">
+                <span className="text-zinc-600 text-xs">Starter tier</span>
+                <ChevronRight size={14} className="text-zinc-500 group-hover:text-white transition-colors" />
+              </div>
+            </Link>
             {/* CRM */}
             {[
               { id: 'crm', icon: Users, name: 'Buyer/Supplier CRM', desc: 'Track outstanding payments. AI follow-ups in Gujarati.', color: '#a78bfa', tier: 'Growth' },

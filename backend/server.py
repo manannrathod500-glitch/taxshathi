@@ -6,9 +6,10 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Any
 import uuid
 from datetime import datetime, timezone
+import requests
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 ROOT_DIR = Path(__file__).parent
@@ -214,6 +215,140 @@ async def update_module_status(module_id: str, data: dict):
 async def get_analyses():
     analyses = await db.module_analyses.find({}, {'_id': 0}).sort('created_at', -1).to_list(20)
     return analyses
+
+
+# ── AI PROXY (Gemini, server-side) ───────────────────────────────────────────
+GEMINI_REST_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+)
+
+LANG_NAME = {
+    "en": "English",
+    "hi": "Hindi (Devanagari script)",
+    "gu": "Gujarati (Gujarati script)",
+}
+
+BIZ_LABEL = {
+    "textile": "Textile",
+    "diamond": "Diamond / Gems & Jewellery",
+    "pharma": "Pharmaceutical",
+    "kirana": "Kirana / FMCG",
+    "manufacturing": "Manufacturing",
+    "services": "Services",
+}
+
+
+def _gemini_json(prompt: str, temperature: float = 0.3) -> dict:
+    """Call Gemini and parse the JSON response."""
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured on server")
+    try:
+        r = requests.post(
+            f"{GEMINI_REST_URL}?key={GEMINI_API_KEY}",
+            json={
+                "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "responseMimeType": "application/json",
+                },
+            },
+            timeout=45,
+        )
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Gemini network error: {e}")
+    if not r.ok:
+        raise HTTPException(status_code=502, detail=f"Gemini {r.status_code}: {r.text[:300]}")
+    try:
+        text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError, ValueError) as e:
+        raise HTTPException(status_code=502, detail=f"Malformed Gemini response: {e}")
+    import json as _json
+    try:
+        return _json.loads(text)
+    except _json.JSONDecodeError:
+        return {"raw": text}
+
+
+class GSTTotals(BaseModel):
+    taxable: float
+    cgst: float
+    sgst: float
+    igst: float
+    totalTax: float
+
+
+class GSTInsightsRequest(BaseModel):
+    language: str = "en"
+    business_type: str = "textile"
+    business_state: str = "Gujarat"
+    totals: GSTTotals
+    entry_count: int = 0
+
+
+@api_router.post("/ai/gst-insights")
+async def ai_gst_insights(data: GSTInsightsRequest):
+    lang = LANG_NAME.get(data.language, "English")
+    sector = BIZ_LABEL.get(data.business_type, data.business_type)
+    month = datetime.now(timezone.utc).strftime("%B %Y")
+    t = data.totals
+    prompt = f"""You are an Indian GST compliance assistant for SMBs. Respond ONLY in {lang}. Generate output as STRICT JSON matching this schema:
+{{
+  "summary": "1-2 sentence high-level summary of the month's GST position",
+  "checklist": ["6-8 actionable compliance items for the current month with specific Indian GST due dates"],
+  "tips": ["3-5 sector-specific optimisation/risk tips"]
+}}
+
+Context:
+- Month: {month}
+- Business sector: {sector}
+- Place of business (state): {data.business_state}
+- Number of sales invoices this month: {data.entry_count}
+- Total taxable sales: ₹{t.taxable:.2f}
+- CGST payable: ₹{t.cgst:.2f}
+- SGST payable: ₹{t.sgst:.2f}
+- IGST payable: ₹{t.igst:.2f}
+- Total GST liability: ₹{t.totalTax:.2f}
+
+Important:
+- Mention the exact GSTR-1 due date (11th of next month) and GSTR-3B due date (20th of next month).
+- Include reminders for ITC reconciliation, e-invoicing threshold (turnover > ₹5 Cr), TDS under GST, and any sector-specific obligation.
+- Keep each checklist item under 25 words.
+- Output JSON ONLY — no markdown fences, no explanation."""
+    return _gemini_json(prompt, temperature=0.4)
+
+
+class ParseOrderRequest(BaseModel):
+    message: str
+    seller_state: str = "Gujarat"
+
+
+@api_router.post("/ai/parse-order")
+async def ai_parse_order(data: ParseOrderRequest):
+    if not data.message.strip():
+        raise HTTPException(status_code=400, detail="Empty order message")
+    prompt = f"""You are an Indian GST invoice parser. Extract structured data from this informal WhatsApp / SMS order message into STRICT JSON. Use Indian GST conventions.
+
+Schema:
+{{
+  "buyer": {{ "name": "string", "gstin": "string-or-empty", "address": "string-or-empty", "state": "one-of-Indian-states-or-empty" }},
+  "items": [
+    {{ "description": "string", "hsn": "best-guess-HSN-code-as-string", "qty": number, "unit": "m|kg|nos|pcs|box|other", "rate": number, "gstRate": 5|12|18|28 }}
+  ]
+}}
+
+Rules:
+- "rate" is per-unit price in INR (number, no currency symbol).
+- "qty" is the quantity number.
+- Pick the most appropriate Indian HSN code (e.g. cotton fabric=5208, polyester=5407, garments=6109, diamonds=7102, pharma=3004, electronics=8517, services=9983).
+- Pick a sensible GST rate based on the product (5% for textile fabric, 12% for processed, 18% for services/garments above ₹1000, 28% for luxury).
+- Buyer state must be a valid Indian state name (e.g. "Maharashtra", "Gujarat") if mentioned, else "".
+- Output JSON ONLY. No markdown, no commentary.
+
+Seller state for context: {data.seller_state}
+
+Order message:
+\"\"\"{data.message}\"\"\""""
+    return _gemini_json(prompt, temperature=0.2)
 
 
 app.include_router(api_router)

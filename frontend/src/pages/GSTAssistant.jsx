@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import {
   ArrowLeft, Plus, Trash2, Calculator, FileText, CheckCircle2,
   Sparkles, Loader2, Globe, AlertCircle, Download, Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // ── i18n ──────────────────────────────────────────────────────────────────────
 const T = {
@@ -147,54 +147,22 @@ function computeGST(entries, businessState) {
   return { lines, totals };
 }
 
-// ── Gemini call for compliance checklist + insights ───────────────────────────
+// ── Gemini-backed call (proxied via backend) ─────────────────────────────────
 async function fetchAIInsights({ language, businessType, businessState, totals, entryCount }) {
-  const langName = { en: 'English', hi: 'Hindi (Devanagari script)', gu: 'Gujarati (Gujarati script)' }[language];
-  const month = new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-
-  const prompt = `You are an Indian GST compliance assistant for SMBs. Respond ONLY in ${langName}. Generate output as STRICT JSON matching this schema:
-{
-  "summary": "1-2 sentence high-level summary of the month's GST position",
-  "checklist": ["6-8 actionable compliance items for the current month with specific Indian GST due dates"],
-  "tips": ["3-5 sector-specific optimisation/risk tips"]
-}
-
-Context:
-- Month: ${month}
-- Business sector: ${BIZ_TYPES[businessType]?.label || businessType}
-- Place of business (state): ${businessState}
-- Number of sales invoices this month: ${entryCount}
-- Total taxable sales: ₹${totals.taxable.toFixed(2)}
-- CGST payable: ₹${totals.cgst.toFixed(2)}
-- SGST payable: ₹${totals.sgst.toFixed(2)}
-- IGST payable: ₹${totals.igst.toFixed(2)}
-- Total GST liability: ₹${totals.totalTax.toFixed(2)}
-
-Important:
-- Mention the exact GSTR-1 due date (11th of next month) and GSTR-3B due date (20th of next month).
-- Include reminders for ITC reconciliation, e-invoicing threshold (turnover > ₹5 Cr), TDS under GST, and any sector-specific obligation.
-- Keep each checklist item under 25 words.
-- Output JSON ONLY — no markdown fences, no explanation.`;
-
-  const res = await fetch(GEMINI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.4,
-        responseMimeType: 'application/json',
-      },
-    }),
+  const res = await axios.post(`${API}/ai/gst-insights`, {
+    language,
+    business_type: businessType,
+    business_state: businessState,
+    totals: {
+      taxable: totals.taxable,
+      cgst: totals.cgst,
+      sgst: totals.sgst,
+      igst: totals.igst,
+      totalTax: totals.totalTax,
+    },
+    entry_count: entryCount,
   });
-
-  if (!res.ok) {
-    const errTxt = await res.text();
-    throw new Error(`Gemini error: ${res.status} ${errTxt.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  try { return JSON.parse(text); } catch { return { summary: text, checklist: [], tips: [] }; }
+  return res.data || { summary: '', checklist: [], tips: [] };
 }
 
 // ── COMPONENT ─────────────────────────────────────────────────────────────────
@@ -239,10 +207,6 @@ export default function GSTAssistant() {
   const handleCalculate = async () => {
     if (validEntries.length === 0) {
       toast.error(t.noEntries);
-      return;
-    }
-    if (!GEMINI_API_KEY) {
-      toast.error('Gemini API key not configured.');
       return;
     }
     setLoading(true);
