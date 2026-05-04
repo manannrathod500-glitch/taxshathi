@@ -1,5 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,9 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Optional, Dict
 import uuid
-from datetime import datetime, timezone, timedelta
-import bcrypt
-from jose import jwt, JWTError
+from datetime import datetime, timezone
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 ROOT_DIR = Path(__file__).parent
@@ -24,52 +21,67 @@ mongo_url = os.environ['MONGO_URL']
 motor_client = AsyncIOMotorClient(mongo_url)
 db = motor_client[os.environ['DB_NAME']]
 
-app = FastAPI(title="TaxSaathi API")
+app = FastAPI(title="TaxSathi AI API")
 api_router = APIRouter(prefix="/api")
-security = HTTPBearer(auto_error=False)
 
-JWT_SECRET = os.environ.get('JWT_SECRET', 'taxsaathi-jwt-2025-secure-key')
-ALGORITHM = "HS256"
 EMERGENT_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
-sales_sessions: Dict[str, LlmChat] = {}
-advisor_sessions: Dict[str, LlmChat] = {}
+# Session caches
+demo_sessions: Dict[str, LlmChat] = {}
+analyzer_sessions: Dict[str, LlmChat] = {}
 
-SALES_PROMPT = """You are TaxSaathi Sales Agent — a warm, persuasive, helpful AI sales agent for TaxSaathi GST advisory service at taxsaathi.info. You speak Hindi, English, or Hinglish depending on what the visitor uses. YOUR ONLY GOAL is to convert this visitor into a paying TaxSaathi subscriber.
+# ── SYSTEM PROMPTS ──────────────────────────────────────────────────────────
+DEMO_PROMPT = """You are TaxSathi AI — an expert AI assistant for Indian SMB owners, especially Gujarat textile and diamond traders. You have deep knowledge of:
+- GST filing (GSTR-1, GSTR-3B, GSTR-9, composition scheme)
+- Invoice generation and e-invoicing rules
+- Input Tax Credit (ITC) reconciliation
+- TDS, advance tax, compliance deadlines
+- Tally ERP integration
+- WhatsApp-based business workflows for Indian traders
 
-STEP 1 — BUILD TRUST: Greet warmly: "Namaste! Main TaxSaathi AI hun. Aapka koi bhi GST sawaal ho — bilkul free mein poochh sakte ho." Ask what their business is. Ask their biggest GST problem right now.
+Answer in the same language as the question (Gujarati, Hindi, or English). Keep answers practical, specific, and actionable. For GST questions, mention exact form names, deadlines, and portal steps. Give Gujarat textile/diamond trader examples where relevant.
 
-STEP 2 — SOLVE ONE PROBLEM FREE: Answer their GST question completely and accurately for FREE. After answering say: "Yeh toh sirf ek sawaal tha — aur bhi GST problems honge aapke business mein, hai na?"
+Always end answers with: "⚠️ Filing se pehle apne CA se verify zaroor karein." """
 
-STEP 3 — PITCH NATURALLY: "Sirf ₹1,500/month mein unlimited questions — 24/7, Hindi mein, turant jawab." "3 din ka free trial bhi hai — agar pasand na aaye toh ek bhi paisa nahi." Never sound salesy — sound like a helpful friend.
+ANALYZER_PROMPT = """You are TaxSathi AI's Chief Product Strategist. TaxSathi AI is a vertical SaaS for Indian SMBs (Gujarat textile, diamond traders + all India). 
 
-STEP 4 — HANDLE OBJECTIONS:
-- If "mehenga hai": "Ek CA ko ₹3,000-5,000/month dete ho — hum sirf ₹1,500 mein wahi kaam 24/7."
-- If "sochta hun": "Bilkul — tab tak ek aur sawaal poochh lo free mein."
-- If "trust nahi": "Isliye 3 din free trial hai — koi commitment nahi."
-- If "baad mein": "Aaj subscribe karo toh pehle month ₹500 off — sirf aaj ka offer."
+Current 6 modules:
+1. AI GST Assistant — GSTR-1/GSTR-3B drafting, reminders in Gujarati (Starter tier)
+2. Smart Invoice Engine — WhatsApp order → GST invoice → Tally sync (Starter tier)
+3. Buyer/Supplier CRM — Outstanding payments, AI follow-ups (Growth tier)
+4. Compliance Calendar — TDS, advance tax, GST deadlines + WhatsApp alerts (Growth tier)
+5. CA Connect Marketplace — Connects users to CAs, 20-30% revenue cut (Enterprise tier)
+6. Business Insights — Monthly AI report in Gujarati (Enterprise tier)
 
-STEP 5 — CLOSE: "Bahut badhiya! Yahan se shuru karein — taxsaathi.info/pricing. 3 din free, uske baad ₹1,500/month."
-End every GST answer with: "⚠️ Filing se pehle apne CA se confirm zaroor karein." """
+Pricing: Starter ₹2,999/month | Growth ₹7,999/month | Enterprise ₹19,999/month
+ARR Goal: ₹10 crore in 18-24 months (~417 Enterprise or ~1,042 Growth customers needed)
+Tech stack: Gemini API (AI) + Composio (Google Sheets, Tally, Gmail, WhatsApp integrations)
 
-ADVISOR_PROMPT = """You are TaxSaathi, India's expert AI GST advisor for small traders and businesses in Gujarat. You have complete knowledge of GST registration, GSTR-1, GSTR-3B, GSTR-9, Input Tax Credit, e-invoicing, e-way bills, GST notices, composition scheme, GST rates, HSN codes, GST portal help, and all GST council updates up to 2025.
+For the new module idea provided, give a concise structured analysis with these exact sections:
 
-Answer in the same language the client uses — Hindi, Gujarati, or English. Give complete step-by-step practical answers with exact form names, portal steps, and deadlines. Always give a Gujarat trader example.
+## a) Product Fit
+Does it fit TaxSathi AI or should it be a separate product? Why?
 
-End every answer with: "⚠️ TaxSaathi sirf guidance deta hai — filing se pehle apne CA se confirm karein." """
+## b) Pricing Tier
+Which tier (Starter/Growth/Enterprise)? Justification?
+
+## c) Revenue Impact
+How does this affect ₹10Cr ARR math? ARPU impact, churn reduction, new segments?
+
+## d) Technical Implementation
+How to implement using Gemini API + Composio?
+
+## e) Stickiness vs Complexity
+Rate 1-10 stickiness. Rate 1-10 complexity. Net recommendation: Build / Defer / Skip?
+
+Be direct, analytical, data-driven. Use Indian SMB market context."""
 
 
-class RegisterRequest(BaseModel):
-    name: str
+class WaitlistEntry(BaseModel):
     email: str
-    phone: str
-    password: str
-    referral_code: Optional[str] = None
-
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
+    name: Optional[str] = None
+    business_type: Optional[str] = None
+    city: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
@@ -77,285 +89,118 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
 
 
-class SubscribeRequest(BaseModel):
-    plan: str
-    payment_id: Optional[str] = None
+class AnalyzerRequest(BaseModel):
+    module_name: str
+    description: str
+    target_users: Optional[str] = None
+    session_id: Optional[str] = None
 
 
-def hash_pw(pw: str) -> str:
-    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
-
-
-def verify_pw(pw: str, hashed: str) -> bool:
-    try:
-        return bcrypt.checkpw(pw.encode(), hashed.encode())
-    except Exception:
-        return False
-
-
-def make_token(user_id: str, is_admin: bool = False) -> str:
-    payload = {
-        'sub': user_id,
-        'admin': is_admin,
-        'exp': datetime.now(timezone.utc) + timedelta(days=7)
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
-
-
-async def get_user(creds: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    if not creds:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    try:
-        payload = jwt.decode(creds.credentials, JWT_SECRET, algorithms=[ALGORITHM])
-        user = await db.users.find_one({'id': payload['sub']}, {'_id': 0})
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        if not user.get('is_active', True):
-            raise HTTPException(status_code=403, detail="Account deactivated")
-        return user
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-
-async def get_admin(user: dict = Depends(get_user)) -> dict:
-    if not user.get('is_admin'):
-        raise HTTPException(status_code=403, detail="Admin access only")
-    return user
-
-
-@app.on_event("startup")
-async def startup():
-    try:
-        existing = await db.users.find_one({'email': 'mananrathod500@gmail.com'})
-        if not existing:
-            uid = str(uuid.uuid4())
-            await db.users.insert_one({
-                'id': uid, 'name': 'Manan Rathod',
-                'email': 'mananrathod500@gmail.com', 'phone': '+919999999999',
-                'password_hash': hash_pw('Manann3'), 'plan': 'premium',
-                'free_questions_used': 0, 'bonus_questions': 999,
-                'referral_code': 'admin2025', 'referred_by': None,
-                'subscription_start': datetime.now(timezone.utc).isoformat(),
-                'subscription_end': (datetime.now(timezone.utc) + timedelta(days=365)).isoformat(),
-                'is_active': True, 'is_admin': True,
-                'created_at': datetime.now(timezone.utc).isoformat()
-            })
-            logger.info("Admin user created")
-        elif not existing.get('is_admin'):
-            await db.users.update_one(
-                {'email': 'mananrathod500@gmail.com'},
-                {'$set': {'is_admin': True, 'plan': 'premium', 'is_active': True}}
-            )
-            logger.info("Admin privileges updated")
-    except Exception as e:
-        logger.error(f"Startup error: {e}")
-
-
-# ── AUTH ──
-@api_router.post("/auth/register")
-async def register(data: RegisterRequest):
-    existing = await db.users.find_one({'email': data.email.lower()})
+# ── WAITLIST ────────────────────────────────────────────────────────────────
+@api_router.post("/waitlist")
+async def join_waitlist(entry: WaitlistEntry):
+    existing = await db.waitlist.find_one({'email': entry.email.lower()})
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    uid = str(uuid.uuid4())
-    clean = data.name.lower().replace(' ', '')[:8]
-    ref_code = f"{clean}{uid[:6]}"
-
-    user = {
-        'id': uid, 'name': data.name, 'email': data.email.lower(),
-        'phone': data.phone, 'password_hash': hash_pw(data.password),
-        'plan': 'free', 'free_questions_used': 0, 'bonus_questions': 0,
-        'referral_code': ref_code, 'referred_by': data.referral_code,
-        'subscription_start': None, 'subscription_end': None,
-        'is_active': True, 'is_admin': False,
+        return {'success': True, 'message': 'Already on waitlist!', 'already_exists': True}
+    count = await db.waitlist.count_documents({})
+    await db.waitlist.insert_one({
+        'id': str(uuid.uuid4()),
+        'email': entry.email.lower(),
+        'name': entry.name,
+        'business_type': entry.business_type,
+        'city': entry.city,
+        'position': count + 1,
         'created_at': datetime.now(timezone.utc).isoformat()
-    }
-
-    if data.referral_code:
-        referrer = await db.users.find_one({'referral_code': data.referral_code})
-        if referrer:
-            await db.users.update_one({'referral_code': data.referral_code}, {'$inc': {'bonus_questions': 5}})
-            user['bonus_questions'] = 5
-            await db.referrals.insert_one({
-                'id': str(uuid.uuid4()), 'referrer_id': referrer['id'],
-                'referred_user_id': uid, 'bonus_given': True,
-                'discount_applied': False,
-                'created_at': datetime.now(timezone.utc).isoformat()
-            })
-
-    await db.users.insert_one(user)
-    token = make_token(uid)
-    user.pop('password_hash', None)
-    user.pop('_id', None)
-    return {'token': token, 'user': user}
+    })
+    return {'success': True, 'message': f'You are #{count + 1} on the waitlist!', 'position': count + 1}
 
 
-@api_router.post("/auth/login")
-async def login(data: LoginRequest):
-    user = await db.users.find_one({'email': data.email.lower()}, {'_id': 0})
-    if not user or not verify_pw(data.password, user.get('password_hash', '')):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    if not user.get('is_active', True):
-        raise HTTPException(status_code=403, detail="Account deactivated")
-    token = make_token(user['id'], user.get('is_admin', False))
-    return {'token': token, 'user': {k: v for k, v in user.items() if k != 'password_hash'}}
+@api_router.get("/waitlist/count")
+async def waitlist_count():
+    count = await db.waitlist.count_documents({})
+    return {'count': count}
 
 
-@api_router.get("/auth/me")
-async def get_me(current_user: dict = Depends(get_user)):
-    return {k: v for k, v in current_user.items() if k != 'password_hash'}
-
-
-# ── CHAT ──
-@api_router.post("/chat/sales")
-async def sales_chat(data: ChatRequest):
+# ── AI DEMO CHAT ─────────────────────────────────────────────────────────────
+@api_router.post("/chat/demo")
+async def demo_chat(data: ChatRequest):
     sid = data.session_id or str(uuid.uuid4())
-    if sid not in sales_sessions:
-        sales_sessions[sid] = LlmChat(
-            api_key=EMERGENT_KEY, session_id=sid,
-            system_message=SALES_PROMPT
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-    resp = await sales_sessions[sid].send_message(UserMessage(text=data.message))
+    if sid not in demo_sessions:
+        demo_sessions[sid] = LlmChat(
+            api_key=EMERGENT_KEY,
+            session_id=sid,
+            system_message=DEMO_PROMPT
+        ).with_model("gemini", "gemini-2.5-flash")
+    resp = await demo_sessions[sid].send_message(UserMessage(text=data.message))
     return {'response': resp, 'session_id': sid}
 
 
-@api_router.post("/chat/advisor")
-async def advisor_chat(data: ChatRequest, current_user: dict = Depends(get_user)):
-    plan = current_user.get('plan', 'free')
-    free_used = current_user.get('free_questions_used', 0)
-    bonus = current_user.get('bonus_questions', 0)
+# ── MODULE ANALYZER ──────────────────────────────────────────────────────────
+@api_router.post("/analyze/module")
+async def analyze_module(data: AnalyzerRequest):
+    sid = data.session_id or str(uuid.uuid4())
+    if sid not in analyzer_sessions:
+        analyzer_sessions[sid] = LlmChat(
+            api_key=EMERGENT_KEY,
+            session_id=sid,
+            system_message=ANALYZER_PROMPT
+        ).with_model("gemini", "gemini-2.5-flash")
 
-    if plan == 'free':
-        available = (10 - free_used) + bonus
-        if available <= 0:
-            raise HTTPException(status_code=402, detail="Free questions exhausted. Please subscribe.")
+    prompt = f"""Analyze this new module idea for TaxSathi AI:
 
-    uid = current_user['id']
-    sid = data.session_id or f"advisor_{uid}"
-    if sid not in advisor_sessions:
-        advisor_sessions[sid] = LlmChat(
-            api_key=EMERGENT_KEY, session_id=sid,
-            system_message=ADVISOR_PROMPT
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+Module Name: {data.module_name}
+Description: {data.description}
+Target Users: {data.target_users or 'Same as TaxSathi AI (Indian SMBs, Gujarat traders)'}
 
-    resp = await advisor_sessions[sid].send_message(UserMessage(text=data.message))
-    await db.conversations.insert_one({
-        'id': str(uuid.uuid4()), 'user_id': uid,
-        'message': data.message, 'response': resp,
+Provide the full analysis with all 5 sections (a through e)."""
+
+    resp = await analyzer_sessions[sid].send_message(UserMessage(text=prompt))
+
+    # Save analysis
+    await db.module_analyses.insert_one({
+        'id': str(uuid.uuid4()),
+        'module_name': data.module_name,
+        'description': data.description,
+        'analysis': resp,
         'created_at': datetime.now(timezone.utc).isoformat()
     })
-
-    new_used = free_used
-    if plan == 'free':
-        await db.users.update_one({'id': uid}, {'$inc': {'free_questions_used': 1}})
-        new_used = free_used + 1
-
-    remaining = max(0, (10 - new_used) + bonus) if plan == 'free' else -1
-    return {'response': resp, 'session_id': sid, 'free_questions_used': new_used,
-            'questions_remaining': remaining, 'plan': plan}
+    return {'analysis': resp, 'session_id': sid}
 
 
-@api_router.get("/conversations")
-async def get_conversations(current_user: dict = Depends(get_user)):
-    convs = await db.conversations.find(
-        {'user_id': current_user['id']}, {'_id': 0}
-    ).sort('created_at', -1).to_list(100)
-    return convs
-
-
-# ── SUBSCRIPTION ──
-@api_router.post("/subscribe")
-async def subscribe(data: SubscribeRequest, current_user: dict = Depends(get_user)):
-    plans = {'basic': 1500, 'pro': 1800, 'premium': 2000}
-    if data.plan not in plans:
-        raise HTTPException(status_code=400, detail="Invalid plan")
-    now = datetime.now(timezone.utc)
-    end = now + timedelta(days=30)
-    await db.users.update_one(
-        {'id': current_user['id']},
-        {'$set': {'plan': data.plan, 'subscription_start': now.isoformat(),
-                  'subscription_end': end.isoformat(), 'is_active': True}}
-    )
-    return {'success': True, 'plan': data.plan, 'expires': end.isoformat(), 'amount': plans[data.plan]}
-
-
-# ── REFERRAL ──
-@api_router.get("/referral/stats")
-async def referral_stats(current_user: dict = Depends(get_user)):
-    referrals = await db.referrals.find({'referrer_id': current_user['id']}, {'_id': 0}).to_list(100)
-    return {
-        'referral_code': current_user.get('referral_code', ''),
-        'referral_link': f"https://taxsaathi.info/ref/{current_user.get('referral_code', '')}",
-        'total_referrals': len(referrals),
-        'bonus_questions': current_user.get('bonus_questions', 0),
-        'discount_earned': len([r for r in referrals if r.get('discount_applied')]) * 200,
-        'referrals': referrals
-    }
-
-
-# ── ADMIN ──
-@api_router.get("/admin/stats")
-async def admin_stats(admin: dict = Depends(get_admin)):
-    total = await db.users.count_documents({'is_admin': {'$ne': True}})
-    paid = await db.users.count_documents({'plan': {'$nin': ['free']}, 'is_admin': {'$ne': True}})
-    convs = await db.conversations.count_documents({})
-    revenue = paid * 1600
-    months = []
-    for i in range(5, -1, -1):
-        d = datetime.now(timezone.utc) - timedelta(days=30 * i)
-        months.append({'month': d.strftime('%b'), 'revenue': max(0, revenue - i * 600 + i * 150)})
-    return {'total_users': total, 'paid_users': paid, 'free_users': total - paid,
-            'total_conversations': convs, 'revenue_this_month': revenue, 'revenue_chart': months}
-
-
-@api_router.get("/admin/users")
-async def admin_users(admin: dict = Depends(get_admin)):
-    users = await db.users.find(
-        {'is_admin': {'$ne': True}}, {'_id': 0, 'password_hash': 0}
-    ).sort('created_at', -1).to_list(500)
-    return users
-
-
-@api_router.get("/admin/conversations/{user_id}")
-async def admin_user_convs(user_id: str, admin: dict = Depends(get_admin)):
-    return await db.conversations.find({'user_id': user_id}, {'_id': 0}).sort('created_at', -1).to_list(100)
-
-
-@api_router.post("/admin/users/{user_id}/activate")
-async def admin_activate(user_id: str, admin: dict = Depends(get_admin)):
-    end = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
-    await db.users.update_one({'id': user_id}, {'$set': {'is_active': True, 'plan': 'basic', 'subscription_end': end}})
-    return {'success': True}
-
-
-@api_router.post("/admin/users/{user_id}/deactivate")
-async def admin_deactivate(user_id: str, admin: dict = Depends(get_admin)):
-    await db.users.update_one({'id': user_id}, {'$set': {'is_active': False}})
-    return {'success': True}
-
-
-@api_router.post("/admin/users/{user_id}/nudge")
-async def admin_nudge(user_id: str, admin: dict = Depends(get_admin)):
-    user = await db.users.find_one({'id': user_id}, {'_id': 0, 'name': 1, 'email': 1})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {'success': True, 'message': f"Nudge sent to {user.get('email', '')}"}
-
-
-@api_router.get("/admin/referrals")
-async def admin_referrals(admin: dict = Depends(get_admin)):
-    pipeline = [
-        {'$group': {'_id': '$referrer_id', 'count': {'$sum': 1}}},
-        {'$sort': {'count': -1}}, {'$limit': 10}
+# ── PROGRESS TRACKER ─────────────────────────────────────────────────────────
+@api_router.get("/progress")
+async def get_progress():
+    modules = [
+        {'id': 'website', 'name': 'Marketing Website', 'desc': 'Landing page, demo, analyzer', 'status': 'live', 'priority': 0, 'effort': 'Low', 'revenue_impact': 'Acquisition'},
+        {'id': 'gst', 'name': 'AI GST Assistant', 'desc': 'GSTR-1/GSTR-3B drafting, Gujarati reminders', 'status': 'next', 'priority': 1, 'tier': 'Starter', 'effort': 'High', 'revenue_impact': '₹2,999×N'},
+        {'id': 'invoice', 'name': 'Smart Invoice Engine', 'desc': 'WhatsApp order → GST invoice → Tally sync', 'status': 'planned', 'priority': 2, 'tier': 'Starter', 'effort': 'High', 'revenue_impact': 'Upsell'},
+        {'id': 'crm', 'name': 'Buyer/Supplier CRM', 'desc': 'Outstanding payments, AI follow-ups', 'status': 'planned', 'priority': 3, 'tier': 'Growth', 'effort': 'Medium', 'revenue_impact': '₹7,999×N'},
+        {'id': 'compliance', 'name': 'Compliance Calendar', 'desc': 'TDS, advance tax, GST deadlines + WhatsApp alerts', 'status': 'planned', 'priority': 4, 'tier': 'Growth', 'effort': 'Medium', 'revenue_impact': 'Retention'},
+        {'id': 'ca', 'name': 'CA Connect Marketplace', 'desc': 'Connect users to CAs, 20-30% revenue cut', 'status': 'planned', 'priority': 5, 'tier': 'Enterprise', 'effort': 'Medium', 'revenue_impact': 'Marketplace'},
+        {'id': 'insights', 'name': 'Business Insights', 'desc': 'Monthly AI report in Gujarati/Hindi', 'status': 'planned', 'priority': 6, 'tier': 'Enterprise', 'effort': 'Low', 'revenue_impact': '₹19,999×N'},
     ]
-    results = await db.referrals.aggregate(pipeline).to_list(10)
-    out = []
-    for r in results:
-        u = await db.users.find_one({'id': r['_id']}, {'_id': 0, 'name': 1, 'email': 1, 'referral_code': 1})
-        if u:
-            out.append({**u, 'referral_count': r['count']})
-    return out
+    live = len([m for m in modules if m['status'] == 'live'])
+    total = len(modules)
+    pct = round((live / total) * 100)
+    return {'modules': modules, 'completion_pct': pct, 'live_count': live, 'total': total,
+            'next_step': 'Build AI GST Assistant — Module 1 (Starter tier, highest revenue impact)'}
+
+
+@api_router.patch("/progress/{module_id}")
+async def update_module_status(module_id: str, data: dict):
+    await db.module_status.update_one(
+        {'module_id': module_id},
+        {'$set': {'status': data.get('status'), 'updated_at': datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {'success': True}
+
+
+# ── PAST ANALYSES ─────────────────────────────────────────────────────────────
+@api_router.get("/analyses")
+async def get_analyses():
+    analyses = await db.module_analyses.find({}, {'_id': 0}).sort('created_at', -1).to_list(20)
+    return analyses
 
 
 app.include_router(api_router)

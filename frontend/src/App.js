@@ -1,40 +1,34 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import LandingPage from '@/pages/LandingPage';
-import AuthPage from '@/pages/AuthPage';
-import Dashboard from '@/pages/Dashboard';
-import AdminDashboard from '@/pages/AdminDashboard';
+import DemoPage from '@/pages/DemoPage';
+import ModuleAnalyzer from '@/pages/ModuleAnalyzer';
+import ProgressTracker from '@/pages/ProgressTracker';
 import '@/App.css';
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#040906]">
-      <div className="w-10 h-10 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-  if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && !user.is_admin) return <Navigate to="/dashboard" replace />;
-  return children;
+// Scroll reveal observer
+const useScrollReveal = () => {
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } }),
+      { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+    );
+    const attach = () => document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+    attach();
+    const timer = setTimeout(attach, 500);
+    return () => { obs.disconnect(); clearTimeout(timer); };
+  }, []);
 };
 
-const ReferralRedirect = () => {
-  const { code } = useParams();
-  return <Navigate to={`/register?ref=${code}`} replace />;
-};
-
-function AppRoutes() {
-  const { user } = useAuth();
+function AppWithReveal() {
+  useScrollReveal();
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="login" />} />
-      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage mode="register" />} />
-      <Route path="/ref/:code" element={<ReferralRedirect />} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/demo" element={<DemoPage />} />
+      <Route path="/analyzer" element={<ModuleAnalyzer />} />
+      <Route path="/progress" element={<ProgressTracker />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -42,14 +36,16 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-        <Toaster position="top-right" toastOptions={{
-          style: { background: '#1f2937', color: '#fff', border: '1px solid #16a34a' }
-        }} />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <AppWithReveal />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: { background: '#0a0a0a', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '14px' },
+          success: { iconTheme: { primary: '#22c55e', secondary: '#000' } }
+        }}
+      />
+    </BrowserRouter>
   );
 }
 
