@@ -6,6 +6,7 @@ import {
   ArrowRight, ChevronRight, Check, Zap, Globe, Shield, Menu, X, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabaseClient';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -85,10 +86,30 @@ const WaitlistModal = ({ open, onClose, initialCount }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/waitlist`, form);
+      const { error } = await supabase
+        .from('waitlist')
+        .insert([
+          {
+            name: form.name,
+            email: form.email,
+            business_type: form.business_type,
+            city: form.city
+          }
+        ]);
+        
+      if (error) throw error;
+      
+      // Get count to estimate position
+      const { count } = await supabase
+        .from('waitlist')
+        .select('*', { count: 'exact', head: true });
+        
       setSuccess(true);
-      setPosition(res.data.position);
-    } catch { toast.error('Something went wrong. Please try again.'); }
+      setPosition(count || initialCount + 1);
+    } catch (err) { 
+      console.error(err);
+      toast.error('Something went wrong. Please try again.'); 
+    }
     finally { setLoading(false); }
   };
 
