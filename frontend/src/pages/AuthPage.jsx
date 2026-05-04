@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Shield, Eye, EyeOff, ArrowLeft, User, Mail, Phone, Lock, Briefcase } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const AuthPage = ({ mode: initialMode }) => {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const mode = initialMode || (searchParams.get('mode') === 'register' ? 'register' : initialMode);
   const refCode = searchParams.get('ref') || '';
 
@@ -22,6 +23,8 @@ const AuthPage = ({ mode: initialMode }) => {
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
+  const from = location.state?.from?.pathname || '/dashboard';
+
   const update = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
   const handleSubmit = async (e) => {
@@ -31,7 +34,7 @@ const AuthPage = ({ mode: initialMode }) => {
       if (mode === 'login') {
         await login(form.email, form.password);
         toast.success('Welcome back!');
-        navigate('/dashboard');
+        navigate(from, { replace: true });
       } else {
         if (!form.name.trim()) { toast.error('Name is required'); setLoading(false); return; }
         if (!form.business_name.trim()) { toast.error('Business name is required'); setLoading(false); return; }
@@ -47,7 +50,7 @@ const AuthPage = ({ mode: initialMode }) => {
           form.referral_code
         );
         toast.success('Account created! You get 10 free questions.');
-        navigate('/dashboard');
+        navigate(from, { replace: true });
       }
     } catch (err) {
       toast.error(err.message || 'Something went wrong. Please try again.');
