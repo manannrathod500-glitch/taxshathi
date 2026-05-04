@@ -1,96 +1,97 @@
 {
-  "project": "TaxSaathi",
-  "domain": "Finance / Tax Advisory",
-  "theme": "Hybrid (Dark Landing, Light Dashboard)",
-  "archetype": "Landing Page: 5 (Jewel & Luxury) with Neon hints. Dashboard: 1 (Organic & Earthy)",
-  "typography": {
-    "heading_font": "Outfit",
-    "body_font": "Noto Sans",
-    "rules": [
-      "Headings must use 'tracking-tight' and 'font-medium' or 'font-semibold'.",
-      "Do not exceed text-6xl for the H1 hero heading.",
-      "Use Noto Sans for its excellent Hindi/Gujarati script support.",
-      "Never center headings by default; align left for density, center only for hero or specific focal points."
-    ]
+  "theme": "dark",
+  "archetype": "Archetype 4 (Swiss & High-Contrast) + Vercel/Linear Minimalist",
+  "colors": {
+    "background_base": "#050505",
+    "surface_primary": "#0A0A0A",
+    "surface_elevated": "rgba(255, 255, 255, 0.03)",
+    "border_subtle": "rgba(255, 255, 255, 0.08)",
+    "border_active": "rgba(255, 255, 255, 0.2)",
+    "primary_accent": "#FFFFFF",
+    "secondary_accent": "#007AFF",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A1A1AA",
+    "text_muted": "#52525B",
+    "success": "#22C55E",
+    "warning": "#F59E0B",
+    "error": "#EF4444"
   },
-  "color_palette": {
-    "landing_page": {
-      "base": "#040906",
-      "surface": "#08140B",
-      "primary_accent": "#16a34a",
-      "secondary_accent": "#F59E0B",
-      "text_primary": "#F8FAF9",
-      "text_secondary": "#9CA3AF",
-      "border": "rgba(22, 163, 74, 0.2)"
+  "typography": {
+    "headings": {
+      "family": "'Cabinet Grotesk', sans-serif",
+      "classes": "font-extrabold tracking-tighter text-white"
     },
-    "dashboard": {
-      "base": "#F8FAF9",
-      "surface": "#FFFFFF",
-      "primary_accent": "#16a34a",
-      "secondary_accent": "#047857",
-      "text_primary": "#111827",
-      "text_secondary": "#4B5563",
-      "border": "#E5E7EB"
+    "body": {
+      "family": "'Manrope', sans-serif",
+      "classes": "font-medium leading-relaxed text-zinc-400"
+    },
+    "mono_labels": {
+      "family": "'JetBrains Mono', monospace",
+      "classes": "font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] text-zinc-500"
     }
   },
   "visual_enhancers": {
-    "landing_page_surfaces": "Glassmorphism: backdrop-blur-xl bg-black/40 with 1px border-white/10. Glows: shadow-[0_0_30px_rgba(22,163,74,0.15)].",
-    "dashboard_surfaces": "Solid clean backgrounds with max 8px radius. shadow-sm. Minimalistic and high-contrast.",
-    "3d_scene_requirements": "R3F scene: AmbientLight + DirectionalLight. Floating gold coins (mesh, metalness 0.8, roughness 0.2). Glowing 3D Shield with 'GST' text (mesh, emissive #16a34a, bloom effect). Particles using Drei <Sparkles>. Canvas must be absolute behind content with pointer-events-none if not interactive."
+    "background_texture": "Implement a pure CSS Blueprint Grid on #050505 background. Use `background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 24px 24px;`",
+    "borders_and_surfaces": "Zero drop shadows. Use 1px inner borders (`border border-white/10`) to separate surfaces. Add `shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]` for elevated buttons or cards.",
+    "glassmorphism": "For Sticky Headers & Floating Navs: `bg-[#050505]/70 backdrop-blur-2xl border-b border-white/10`. Do not use muddy grey transparency.",
+    "hover_interactions": "Micro-interactions. Buttons should subtly light up (`hover:bg-white/10`) and lift (`-translate-y-[1px]`). Navigation links should change from `text-zinc-400` to `text-white` with a 0.2s ease transition."
   },
-  "layout_and_spacing": {
-    "landing_page": "Generous spacing (py-24 to py-32). Bento grid for features (grid-cols-1 md:grid-cols-8 lg:grid-cols-12, wide gaps).",
-    "dashboard": "Control room layout. Dense, functional grids (gap-4, p-6). Sidebar nav."
+  "layout_strategy": {
+    "general_spacing": "Generous Spacing. Use `py-24 md:py-32` for main landing sections. Inside cards, strictly use `p-6 md:p-8`.",
+    "grids": "Use 'Bento Grid' (Mode A) for the 6 Modules Showcase on the Landing Page (`grid-cols-1 md:grid-cols-8 lg:grid-cols-12` with wide `gap-8`). Use 'Control Room Grid' (Mode B) for the Dashboard/Analyzer pages (`grid-cols-1 md:grid-cols-3` with tight `gap-4`).",
+    "alignment": "Prioritize left-alignment for dense content and cards. Hero section can be left-aligned or center-aligned but must use high-contrast and tension."
   },
-  "motion_and_interactions": {
-    "hero": "GSAP + R3F. Continuous slow rotation of the shield. Coins raining slowly (y-axis translation).",
-    "cards": "Framer motion 3D tilt effect on pricing cards (rotateX/Y on mousemove).",
-    "testimonials": "Infinite scroll using react-fast-marquee. Very slow, organic drift.",
-    "general": "Smooth scrolling with Lenis is highly recommended for the premium feel."
+  "components_styling": {
+    "buttons": "Primary: Flat, sharp edges or max `rounded-md`, `bg-white text-black hover:bg-zinc-200`. Secondary: `bg-transparent border border-white/20 text-white hover:bg-white/5`.",
+    "inputs_forms": "Shadcn Form elements. Strip default styling. Apply: `bg-[#0A0A0A] border-white/10 text-white placeholder:text-zinc-600 focus:ring-1 focus:ring-white focus:border-white`.",
+    "cards": "Minimalist boxes. `bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden`. Add subtle radial gradient on hover for top-tier pricing card."
   },
-  "components": {
-    "landing_page": "Pure HTML/Tailwind + Framer Motion. DO NOT use Shadcn cards/sections. Ensure full control over glassmorphism and bento grids. Use Lucide React for icons.",
-    "dashboard": "Shadcn UI (Sidebar, Tables, Cards, Avatar, Dialog, Button, Input, DropdownMenu). Customize to white/green theme."
-  },
-  "accessibility": {
-    "contrast": "Ensure text over gradients/glass has drop-shadow for contrast. Use APCA contrast minimums.",
-    "testing": "All interactive elements MUST have 'data-testid' attributes (e.g., data-testid='start-trial-button', data-testid='chat-input-field')."
-  },
-  "media": {
-    "hero_fallback": {
-      "url": "https://static.prod-images.emergentagent.com/jobs/60f6df48-e648-47d4-a027-21602b9e676d/images/469d0ff5179b25f49ba95e9b9bedfd9686429ab9a5d3f374a2eda07653f0e402.png",
-      "description": "Abstract dark green and gold luxury digital background for fallback if 3D context is lost or loading."
-    },
-    "testimonial_avatars": [
+  "media_and_assets": {
+    "hero_visuals": [
       {
-        "url": "https://images.unsplash.com/photo-1753184863498-72e77c60888b?crop=entropy&cs=srgb&fm=jpg&q=85",
-        "description": "Indian shopkeeper portrait for testimonial.",
-        "name": "Ramesh Patel",
-        "business": "Kirana Store Owner"
+        "url": "CSS_ONLY",
+        "category": "hero_background",
+        "description": "Do NOT use an image for the hero background. Rely entirely on the deep #050505 color, the CSS Blueprint Grid, and a subtle CSS radial glow (`bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800/20 via-[#050505] to-[#050505]`)."
+      }
+    ],
+    "logos": [
+      {
+        "url": "https://images.unsplash.com/photo-1586867026567-b9b63ae58472?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHw0fHxicmFuZCUyMGxvZ28lMjB3aGl0ZSUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc3ODczODc1fDA&ixlib=rb-4.1.0&q=85",
+        "category": "partner_logo",
+        "description": "Use as a partner logo. MUST apply CSS filters: `grayscale contrast-200 opacity-40 hover:opacity-100 mix-blend-screen`."
       },
       {
-        "url": "https://images.pexels.com/photos/26861411/pexels-photo-26861411.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "description": "Indian grocery store owner for testimonial.",
-        "name": "Sanjay Desai",
-        "business": "Jewellery Shop"
-      },
-      {
-        "url": "https://images.pexels.com/photos/32913713/pexels-photo-32913713.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "description": "Elderly Indian market stall owner for testimonial.",
-        "name": "Vikram Shah",
-        "business": "Hardware Store"
+        "url": "https://images.pexels.com/photos/7661185/pexels-photo-7661185.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "partner_logo",
+        "description": "Use as an abstract branding partner logo. Apply identical CSS filters: `grayscale contrast-200 opacity-40 hover:opacity-100 mix-blend-screen`."
       }
     ]
   },
+  "pages_architecture": {
+    "landing_page": {
+      "path": "/",
+      "instructions": "Full marketing site. Hero section MUST include a Gujarati + English headline (e.g., 'TaxSathi AI: તમારો સ્માર્ટ GST સાથી | The Premium GST & Business Engine'). Problem section using stark typography. 6 Modules Showcase using an asymmetrical Bento Grid. Pricing section (Starter ₹2,999, Growth ₹7,999, Enterprise ₹19,999). Include an email Waitlist form and a fixed/floating WhatsApp CTA button (+91-9999999999)."
+    },
+    "demo_page": {
+      "path": "/demo",
+      "instructions": "AI GST demo chat. Terminal/Retro-Futurism vibe. Pure black UI with a chat window featuring `border-white/10`. Simulated Gemini 2.5 Flash responses. User input box fixed at the bottom of the container."
+    },
+    "module_analyzer": {
+      "path": "/analyzer",
+      "instructions": "AI-powered analysis tool. Dense 'Control Room' grid layout. Sidebar for inputs (Idea, Market), main area for AI output (Fit, Pricing Tier, Revenue Impact). Use progress bars or stat cards with monospaced labels."
+    },
+    "progress_tracker": {
+      "path": "/progress",
+      "instructions": "Visual completion dashboard. Display 6 modules with their status. Use a high-contrast glowing border (`border-white` or `border-green-500/50`) for completed modules, and muted `border-white/5 opacity-50` for pending ones. Show a large % completion metric."
+    }
+  },
   "instructions_to_main_agent": [
-    "1. Initialize React with Tailwind. Install @react-three/fiber, @react-three/drei, three, framer-motion, gsap, react-fast-marquee, lucide-react, and @radix-ui/react-icons.",
-    "2. Landing Page: Build a dark theme '₹10 Lakh' premium page. Hero needs an absolute R3F canvas covering 100vh with a glowing green shield and floating gold coins. Add green accents (#16a34a) to text and CTA buttons (Start Free Trial with pulsing glow).",
-    "3. Features Section: Build a bento grid using pure Tailwind. Style it with glassmorphism (`bg-black/40 backdrop-blur-xl border border-white/10`). Add a floating WhatsApp button fixed at the bottom right.",
-    "4. Pricing Section: Implement 3 pricing cards using Framer Motion to create a 3D tilt effect on mouse hover.",
-    "5. Dashboard: Implement a strict Light Theme with a sidebar. Use Shadcn components heavily (Sidebar, Cards, Table). Keep it pristine, authoritative, and data-focused.",
-    "6. AI Chat: Place the GST advisor chatbot centrally in the client dashboard. Show a 'Welcome' message and a 'Free questions counter' (10/10). Include distinct user/AI message bubbles.",
-    "7. Typography: Include 'Outfit' (for English Headings) and 'Noto Sans' (for Body and complete Hindi/Gujarati support) via Google Fonts.",
-    "8. Testing: Ensure EVERY button, form input, and key link includes a semantic `data-testid` attribute for testing.",
-    "9. DO NOT use placeholder images. Use the precise image URLs provided in the media section of this JSON."
+    "You MUST read and implement the colors and fonts exactly as defined. Do NOT use default Tailwind blue/gray.",
+    "Install `@phosphor-icons/react` for high-end, duotone, or thin-line technical icons.",
+    "Implement `Cabinet Grotesk` and `Manrope` via next/font or standard CSS imports.",
+    "For the Landing page WhatsApp CTA, make it a floating high-contrast button (e.g., pure white background with black text/icon) at the bottom right. Avoid standard WhatsApp green as it breaks the Vercel/Linear dark theme.",
+    "Add `data-testid` to all interactive elements (buttons, inputs, links, chat submit).",
+    "If you use Shadcn, you MUST customize its default theme variables to match the `#050505` base and `#0A0A0A` surface colors. Strip away Vercel's default light border styles.",
+    "Mock the Gemini 2.5 Flash interactions on the Demo and Analyzer pages with `setTimeout` or static responses."
   ]
 }
