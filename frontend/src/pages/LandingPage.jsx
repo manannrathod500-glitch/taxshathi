@@ -448,7 +448,7 @@ export default function LandingPage() {
       {/* ── WHATSAPP FLOATING BUTTON ── */}
       <a
         data-testid="whatsapp-cta"
-        href="https://wa.me/919999999999?text=Hi%20TaxSathi%20AI%20-%20I%20want%20to%20know%20more"
+        href="https://wa.me/917698877447?text=Hi%20TaxSathi%20AI%20-%20I%20want%20to%20know%20more"
         target="_blank" rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 bg-white text-black w-12 h-12 rounded-full shadow-xl flex items-center justify-center hover:bg-zinc-200 transition-all hover:scale-110"
         title="Chat on WhatsApp"

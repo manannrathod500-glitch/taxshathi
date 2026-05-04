@@ -24,7 +24,7 @@ db = motor_client[os.environ['DB_NAME']]
 app = FastAPI(title="TaxSathi AI API")
 api_router = APIRouter(prefix="/api")
 
-EMERGENT_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
 # Session caches
 demo_sessions: Dict[str, LlmChat] = {}
@@ -127,7 +127,7 @@ async def demo_chat(data: ChatRequest):
     sid = data.session_id or str(uuid.uuid4())
     if sid not in demo_sessions:
         demo_sessions[sid] = LlmChat(
-            api_key=EMERGENT_KEY,
+            api_key=GEMINI_API_KEY,
             session_id=sid,
             system_message=DEMO_PROMPT
         ).with_model("gemini", "gemini-2.5-flash")
@@ -141,7 +141,7 @@ async def analyze_module(data: AnalyzerRequest):
     sid = data.session_id or str(uuid.uuid4())
     if sid not in analyzer_sessions:
         analyzer_sessions[sid] = LlmChat(
-            api_key=EMERGENT_KEY,
+            api_key=GEMINI_API_KEY,
             session_id=sid,
             system_message=ANALYZER_PROMPT
         ).with_model("gemini", "gemini-2.5-flash")
