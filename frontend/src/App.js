@@ -5,6 +5,7 @@ import LandingPage from '@/pages/LandingPage';
 import DemoPage from '@/pages/DemoPage';
 import ModuleAnalyzer from '@/pages/ModuleAnalyzer';
 import ProgressTracker from '@/pages/ProgressTracker';
+import GSTAssistant from '@/pages/GSTAssistant';
 import '@/App.css';
 
 // Scroll reveal observer
@@ -29,6 +30,7 @@ function AppWithReveal() {
       <Route path="/demo" element={<DemoPage />} />
       <Route path="/analyzer" element={<ModuleAnalyzer />} />
       <Route path="/progress" element={<ProgressTracker />} />
+      <Route path="/gst-assistant" element={<GSTAssistant />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

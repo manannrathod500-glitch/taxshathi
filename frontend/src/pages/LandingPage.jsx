@@ -28,7 +28,7 @@ const Navbar = ({ onOpenWaitlist }) => {
           <span className="font-display font-bold text-white text-base">TaxSathi AI</span>
         </Link>
         <div className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
-          {[['#modules', 'Modules'], ['#pricing', 'Pricing'], ['/demo', 'AI Demo'], ['/progress', 'Progress']].map(([href, label]) => (
+          {[['#modules', 'Modules'], ['#pricing', 'Pricing'], ['/gst-assistant', 'GST Assistant'], ['/demo', 'AI Demo'], ['/progress', 'Progress']].map(([href, label]) => (
             href.startsWith('#')
               ? <a key={label} href={href} className="hover:text-white transition-colors duration-200">{label}</a>
               : <Link key={label} to={href} className="hover:text-white transition-colors duration-200">{label}</Link>
@@ -46,7 +46,7 @@ const Navbar = ({ onOpenWaitlist }) => {
       </div>
       {menuOpen && (
         <div className="md:hidden bg-[#050505] border-t border-white/8 px-5 py-4 space-y-3">
-          {[['#modules', 'Modules'], ['#pricing', 'Pricing'], ['/demo', 'AI Demo'], ['/progress', 'Progress'], ['/analyzer', 'Module Analyzer']].map(([href, label]) => (
+          {[['#modules', 'Modules'], ['#pricing', 'Pricing'], ['/gst-assistant', 'GST Assistant'], ['/demo', 'AI Demo'], ['/progress', 'Progress'], ['/analyzer', 'Module Analyzer']].map(([href, label]) => (
             href.startsWith('#')
               ? <a key={label} href={href} onClick={() => setMenuOpen(false)} className="block text-zinc-400 hover:text-white text-sm">{label}</a>
               : <Link key={label} to={href} onClick={() => setMenuOpen(false)} className="block text-zinc-400 hover:text-white text-sm">{label}</Link>
@@ -252,13 +252,13 @@ export default function LandingPage() {
           {/* Bento Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 reveal">
             {/* Large: GST Assistant */}
-            <div className="md:col-span-2 ts-card p-8 min-h-[220px] flex flex-col justify-between group hover:border-[#22c55e]/30 transition-all duration-300">
+            <Link to="/gst-assistant" data-testid="modules-gst-card" className="md:col-span-2 ts-card p-8 min-h-[220px] flex flex-col justify-between group hover:border-[#22c55e]/30 transition-all duration-300 cursor-pointer">
               <div>
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-10 h-10 bg-[#22c55e]/10 border border-[#22c55e]/20 rounded-xl flex items-center justify-center">
                     <FileText size={18} style={{ color: '#22c55e' }} />
                   </div>
-                  <span className="badge-live mono-label px-2.5 py-1 rounded-full text-[10px]">MVP</span>
+                  <span className="badge-live mono-label px-2.5 py-1 rounded-full text-[10px]">MVP — Try Now</span>
                 </div>
                 <div className="text-white font-semibold text-lg mb-2 font-display">AI GST Assistant</div>
                 <p className="text-zinc-500 text-sm leading-relaxed">Auto-draft GSTR-1 & GSTR-3B from sales data. Smart reminders in Gujarati. Connect Google Sheets or Tally — AI does the rest.</p>
@@ -267,8 +267,9 @@ export default function LandingPage() {
                 <span className="text-zinc-600 text-xs">Starter tier</span>
                 <span className="text-zinc-700 text-xs">•</span>
                 <span className="text-zinc-600 text-xs">Gemini AI + Composio</span>
+                <ChevronRight size={14} className="ml-auto text-zinc-500 group-hover:text-white transition-colors" />
               </div>
-            </div>
+            </Link>
             {/* Invoice Engine */}
             <div className="ts-card p-6 flex flex-col justify-between group hover:border-[#60a5fa]/30 transition-all duration-300">
               <div>
