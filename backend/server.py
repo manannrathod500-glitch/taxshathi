@@ -330,7 +330,7 @@ async def ai_parse_order(data: ParseOrderRequest):
 
 Schema:
 {{
-  "buyer": {{ "name": "string", "gstin": "string-or-empty", "address": "string-or-empty", "state": "one-of-Indian-states-or-empty" }},
+  "buyer": {{ "name": "string", "gstin": "string-or-empty", "address": "string-or-empty", "state": "one-of-Indian-states-or-empty", "phone": "digits-only-with-country-code-or-empty" }},
   "items": [
     {{ "description": "string", "hsn": "best-guess-HSN-code-as-string", "qty": number, "unit": "m|kg|nos|pcs|box|other", "rate": number, "gstRate": 5|12|18|28 }}
   ]
@@ -342,6 +342,7 @@ Rules:
 - Pick the most appropriate Indian HSN code (e.g. cotton fabric=5208, polyester=5407, garments=6109, diamonds=7102, pharma=3004, electronics=8517, services=9983).
 - Pick a sensible GST rate based on the product (5% for textile fabric, 12% for processed, 18% for services/garments above ₹1000, 28% for luxury).
 - Buyer state must be a valid Indian state name (e.g. "Maharashtra", "Gujarat") if mentioned, else "".
+- "phone" must contain only digits with country code (e.g. "917698877447" — no +, no spaces, no dashes). If a 10-digit Indian mobile is mentioned without country code, prefix "91". Empty string if absent.
 - Output JSON ONLY. No markdown, no commentary.
 
 Seller state for context: {data.seller_state}

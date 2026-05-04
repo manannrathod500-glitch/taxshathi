@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   ArrowLeft, Sparkles, Loader2, Globe, FileText, Download,
-  Plus, Trash2, MessageSquare, Wand2, Receipt, Zap, AlertCircle, RefreshCcw
+  Plus, Trash2, MessageSquare, Wand2, Receipt, Zap, AlertCircle, RefreshCcw, Send
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -33,6 +33,7 @@ const T = {
     buyerGSTIN: 'Buyer GSTIN (optional)',
     buyerAddr: 'Buyer Address',
     buyerState: 'Buyer State',
+    buyerPhone: 'Buyer WhatsApp # (with country code)',
     invNo: 'Invoice #',
     invDate: 'Invoice Date',
     description: 'Item / Description',
@@ -44,6 +45,9 @@ const T = {
     amount: 'Amount',
     preview: 'Invoice Preview',
     download: 'Download PDF',
+    sendWA: 'Send on WhatsApp',
+    needPhone: 'Add buyer WhatsApp number first.',
+    waCaption: 'Opens WhatsApp with a pre-filled invoice summary. Download the PDF and attach in chat.',
     regen: 'Re-parse Order',
     notice: 'AI may misread complex messages. Always verify line items, HSN codes, and GSTIN before sending the invoice to your buyer.',
     subtotal: 'Subtotal',
@@ -74,6 +78,7 @@ const T = {
     buyerGSTIN: 'खरीदार GSTIN (वैकल्पिक)',
     buyerAddr: 'खरीदार का पता',
     buyerState: 'खरीदार राज्य',
+    buyerPhone: 'खरीदार WhatsApp # (देश कोड सहित)',
     invNo: 'इनवॉइस #',
     invDate: 'इनवॉइस तिथि',
     description: 'आइटम / विवरण',
@@ -85,6 +90,9 @@ const T = {
     amount: 'राशि',
     preview: 'इनवॉइस पूर्वावलोकन',
     download: 'PDF डाउनलोड',
+    sendWA: 'WhatsApp पर भेजें',
+    needPhone: 'पहले खरीदार का WhatsApp नंबर डालें।',
+    waCaption: 'पहले से भरा इनवॉइस सारांश के साथ WhatsApp खुलता है। PDF डाउनलोड कर के चैट में अटैच करें।',
     regen: 'फिर से पार्स करें',
     notice: 'AI जटिल संदेशों को गलत पढ़ सकता है। खरीदार को इनवॉइस भेजने से पहले हमेशा आइटम, HSN कोड और GSTIN सत्यापित करें।',
     subtotal: 'उप-योग',
@@ -115,6 +123,7 @@ const T = {
     buyerGSTIN: 'ખરીદનાર GSTIN (વૈકલ્પિક)',
     buyerAddr: 'ખરીદનારનું સરનામું',
     buyerState: 'ખરીદનાર રાજ્ય',
+    buyerPhone: 'ખરીદનાર WhatsApp # (દેશ કોડ સાથે)',
     invNo: 'ઇન્વૉઇસ #',
     invDate: 'ઇન્વૉઇસ તારીખ',
     description: 'આઇટમ / વર્ણન',
@@ -126,6 +135,9 @@ const T = {
     amount: 'રકમ',
     preview: 'ઇન્વૉઇસ પૂર્વાવલોકન',
     download: 'PDF ડાઉનલોડ',
+    sendWA: 'WhatsApp પર મોકલો',
+    needPhone: 'પહેલા ખરીદનારનો WhatsApp નંબર ઉમેરો.',
+    waCaption: 'ઇન્વૉઇસ સારાંશ સાથે પૂર્વ-ભરેલું WhatsApp ખુલે છે. PDF ડાઉનલોડ કરીને ચેટમાં જોડો.',
     regen: 'ફરી પાર્સ કરો',
     notice: 'AI જટિલ સંદેશા ખોટા વાંચી શકે. ખરીદનારને મોકલતા પહેલા આઇટમ, HSN, GSTIN ચકાસો.',
     subtotal: 'પેટા-કુલ',
@@ -154,6 +166,7 @@ const SAMPLE_ORDER = `Hi bhai, please send:
 
 Buyer: Ramesh Garments
 GSTIN: 27AABCR1234M1Z5
+Phone: +91 98765 43210
 Address: 12, MG Road, Mumbai, Maharashtra
 Need delivery by next week.`;
 
@@ -339,6 +352,7 @@ export default function InvoiceEngine() {
     gstin: '',
     address: '',
     state: 'Gujarat',
+    phone: '',
   });
   const [invoice, setInvoice] = useState({
     no: `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
@@ -377,6 +391,7 @@ export default function InvoiceEngine() {
           gstin: parsed.buyer.gstin || b.gstin,
           address: parsed.buyer.address || b.address,
           state: parsed.buyer.state && STATES.includes(parsed.buyer.state) ? parsed.buyer.state : b.state,
+          phone: (parsed.buyer.phone || b.phone || '').toString().replace(/[^\d+]/g, ''),
         }));
       }
       if (Array.isArray(parsed?.items) && parsed.items.length > 0) {
@@ -407,6 +422,48 @@ export default function InvoiceEngine() {
     }
     generatePDF({ seller, buyer, invoice, totals, t });
     toast.success('PDF generated');
+  };
+
+  const handleSendWhatsApp = () => {
+    const phone = (buyer.phone || '').replace(/[^\d]/g, '');
+    if (!phone) {
+      toast.error(t.needPhone);
+      return;
+    }
+    if (!buyer.name || items.every(i => !i.description)) {
+      toast.error(t.nothingParsed);
+      return;
+    }
+    // Build a clean human-readable invoice summary
+    const itemLines = totals.lines
+      .filter(l => l.description)
+      .map((l, i) => `${i + 1}. ${l.description} — ${l.qty} ${l.unit} × ${fmt(l.rate)} = ${fmt(l.amount)} (GST ${l.gstRate}%)`)
+      .join('\n');
+    const taxLine = totals.isIntra
+      ? `CGST: ${fmt(totals.cgst)}\nSGST: ${fmt(totals.sgst)}`
+      : `IGST: ${fmt(totals.igst)}`;
+    const message =
+`*${seller.name || 'TaxSathi'} — Tax Invoice*
+Invoice #: ${invoice.no}
+Date: ${invoice.date}
+
+*Bill To:* ${buyer.name}
+${buyer.address ? buyer.address + '\n' : ''}${buyer.gstin ? 'GSTIN: ' + buyer.gstin : ''}
+
+*Items:*
+${itemLines}
+
+Subtotal: ${fmt(totals.subtotal)}
+${taxLine}
+*Grand Total: ${fmt(totals.grandTotal)}*
+
+Place of supply: ${buyer.state} (${totals.isIntra ? 'Intra-state' : 'Inter-state'})
+
+Generated by TaxSathi AI · taxsathi.ai`;
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    toast.success('Opening WhatsApp…');
   };
 
   const fillSample = () => setOrderText(SAMPLE_ORDER);
@@ -519,6 +576,7 @@ export default function InvoiceEngine() {
               <Field testid="buyer-name" label={t.buyerName} value={buyer.name} onChange={v => setBuyer(b => ({ ...b, name: v }))} span2 />
               <Field testid="buyer-gstin" label={t.buyerGSTIN} value={buyer.gstin} onChange={v => setBuyer(b => ({ ...b, gstin: v.toUpperCase() }))} mono />
               <SelectField testid="buyer-state" label={t.buyerState} value={buyer.state} options={STATES} onChange={v => setBuyer(b => ({ ...b, state: v }))} />
+              <Field testid="buyer-phone" label={t.buyerPhone} value={buyer.phone} onChange={v => setBuyer(b => ({ ...b, phone: v.replace(/[^\d+]/g, '') }))} mono span2 />
               <Field testid="buyer-addr" label={t.buyerAddr} value={buyer.address} onChange={v => setBuyer(b => ({ ...b, address: v }))} span2 />
             </div>
           </section>
@@ -584,10 +642,20 @@ export default function InvoiceEngine() {
                   {totals.isIntra ? t.intra : t.inter}
                 </span>
               </div>
-              <button data-testid="download-pdf-btn" onClick={handleDownload}
-                className="btn-primary text-xs py-2 px-3 flex items-center gap-1.5">
-                <Download size={12} /> {t.download}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  data-testid="send-whatsapp-btn"
+                  onClick={handleSendWhatsApp}
+                  title={t.waCaption}
+                  className="text-xs py-2 px-3 flex items-center gap-1.5 rounded-lg bg-[#22c55e]/15 border border-[#22c55e]/30 text-[#22c55e] hover:bg-[#22c55e]/25 transition-colors font-semibold"
+                >
+                  <Send size={12} /> {t.sendWA}
+                </button>
+                <button data-testid="download-pdf-btn" onClick={handleDownload}
+                  className="btn-primary text-xs py-2 px-3 flex items-center gap-1.5">
+                  <Download size={12} /> {t.download}
+                </button>
+              </div>
             </div>
 
             {/* Invoice document */}
