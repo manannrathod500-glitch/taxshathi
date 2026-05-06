@@ -35,8 +35,10 @@ function WaitlistModal({ open, onClose }) {
 
     try {
       if (!supabase) {
-  throw new Error('Supabase environment variables missing');
-}
+        throw new Error('Supabase environment variables missing');
+      }
+
+      const { error } = await supabase
         .from('waitlist')
         .insert([
           {
