@@ -10,10 +10,13 @@ import {
   X,
 } from 'lucide-react';
 
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+const supabase =
+  supabaseUrl && supabaseKey
+    ? createClient(supabaseUrl, supabaseKey)
+    : null;
 
 function WaitlistModal({ open, onClose }) {
   const [name, setName] = useState('');
@@ -31,7 +34,9 @@ function WaitlistModal({ open, onClose }) {
     setErrorMessage('');
 
     try {
-      const { error } = await supabase
+      if (!supabase) {
+  throw new Error('Supabase environment variables missing');
+}
         .from('waitlist')
         .insert([
           {
