@@ -53,7 +53,7 @@ export default function Dashboard() {
   useEffect(() => {
     const plan = searchParams.get('subscribe');
     if (plan && PLANS[plan]) handleSubscribe(plan);
-  }, []);
+  }, [searchParams]);
 
   const loadHistory = async () => {
     try {
@@ -302,148 +302,7 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
-        {/* HISTORY TAB */}
-        {tab === 'history' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 font-['Outfit']">Conversation History</h2>
-              <button onClick={loadHistory} className="text-gray-400 hover:text-green-600 transition-colors"><RefreshCw size={16} /></button>
-            </div>
-            {history.length === 0 ? (
-              <div className="text-center py-16 text-gray-400">
-                <History size={32} className="mx-auto mb-3 opacity-40" />
-                <p>No conversations yet. Ask your first GST question!</p>
-                <button onClick={() => setTab('chat')} className="mt-3 text-green-600 text-sm hover:underline">Go to Chat</button>
-              </div>
-            ) : (
-              history.map((conv, i) => (
-                <div key={i} data-testid={`history-item-${i}`} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <p className="text-sm font-semibold text-gray-800 flex-1">Q: {conv.message}</p>
-                    <span className="text-xs text-gray-400 flex-shrink-0">{new Date(conv.created_at).toLocaleDateString('en-IN')}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap border-l-2 border-green-200 pl-3">{conv.response}</p>
-                  <button
-                    onClick={() => downloadPDF({ text: conv.response }, { text: conv.message })}
-                    className="mt-2 text-xs text-green-600 hover:underline flex items-center gap-1">
-                    <Download size={12} /> Download PDF
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* SUBSCRIPTION TAB */}
-        {tab === 'subscription' && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-gray-900 font-['Outfit']">Subscription Status</h2>
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${planFree ? 'bg-gray-100' : 'bg-green-100'}`}>
-                  {planFree ? <XCircle size={18} className="text-gray-400" /> : <CheckCircle size={18} className="text-green-600" />}
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">{planFree ? 'Free Plan' : `${user?.plan?.toUpperCase()} Plan`}</div>
-                  <div className="text-sm text-gray-500">
-                    {planFree
-                      ? `${totalFreeAvailable} free questions remaining`
-                      : daysLeft !== null ? `Expires in ${daysLeft} days` : 'Active'}
-                  </div>
-                </div>
-              </div>
-              {!planFree && <div className="text-green-700 bg-green-50 rounded-xl p-3 text-sm font-medium">Unlimited questions active — 24/7 AI GST advisor.</div>}
-            </div>
-
-            {(planFree || (daysLeft !== null && daysLeft <= 7)) && (
-              <div>
-                <h3 className="text-base font-semibold text-gray-800 mb-4 font-['Outfit']">Upgrade Plan</h3>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {Object.entries(PLANS).map(([key, plan]) => (
-                    <div key={key} data-testid={`sub-card-${key}`} className={`rounded-xl border p-5 ${key === 'pro' ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}>
-                      <div className="font-semibold text-gray-900 mb-1">{plan.name}</div>
-                      <div className="text-2xl font-bold text-gray-900 mb-3 font-['Outfit']">₹{plan.price}<span className="text-sm text-gray-500 font-normal">/mo</span></div>
-                      <button
-                        data-testid={`subscribe-plan-${key}`}
-                        onClick={() => handleSubscribe(key)}
-                        disabled={subscribeLoading || user?.plan === key}
-                        className={`w-full py-2 rounded-xl text-sm font-semibold transition-all ${key === 'pro' ? 'bg-green-600 text-white hover:bg-green-500' : 'border border-green-600 text-green-700 hover:bg-green-50'} disabled:opacity-50`}
-                      >
-                        {user?.plan === key ? 'Current Plan' : subscribeLoading ? 'Processing...' : 'Subscribe'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400 mt-3 text-center">⚠️ Payment integration (Razorpay) will be live when keys are configured.</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* REFERRAL TAB */}
-        {tab === 'referral' && (
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold text-gray-900 font-['Outfit']">Refer & Earn</h2>
-            <div className="bg-gradient-to-br from-green-600 to-emerald-700 text-white rounded-2xl p-6">
-              <h3 className="font-bold text-lg mb-1">Refer a friend, get 5 free questions!</h3>
-              <p className="text-green-100 text-sm">When your friend subscribes, you get ₹200 off next month.</p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <div className="text-sm text-gray-600 mb-2 font-medium">Your referral link:</div>
-              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-                <span data-testid="referral-link" className="text-sm text-gray-700 flex-1 truncate">
-                  {referralStats?.referral_link || `https://taxsaathi.info/ref/${user?.referral_code}`}
-                </span>
-                <button data-testid="copy-referral-btn" onClick={copyReferral} className="text-green-600 hover:text-green-700 flex-shrink-0">
-                  <Copy size={16} />
-                </button>
-              </div>
-            </div>
-            {referralStats && (
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  { label: 'Friends Referred', value: referralStats.total_referrals },
-                  { label: 'Bonus Questions', value: referralStats.bonus_questions },
-                  { label: 'Discount Earned', value: `₹${referralStats.discount_earned}` },
-                ].map((s, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm">
-                    <div className="text-2xl font-bold text-green-700 font-['Outfit']">{s.value}</div>
-                    <div className="text-xs text-gray-500 mt-1">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
-
-      {/* ── PAYWALL OVERLAY ── */}
-      {showPaywall && (
-        <div data-testid="paywall-overlay" className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
-            <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle size={28} className="text-orange-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2 font-['Outfit']">Aapke free questions khatam ho gaye!</h2>
-            <p className="text-gray-500 text-sm mb-6">TaxSaathi pasand aaya? Sirf ₹1,500/month mein unlimited questions — aaj subscribe karein.</p>
-            <div className="space-y-3 mb-6">
-              {Object.entries(PLANS).map(([key, plan]) => (
-                <button
-                  key={key}
-                  data-testid={`paywall-subscribe-${key}`}
-                  onClick={() => handleSubscribe(key)}
-                  disabled={subscribeLoading}
-                  className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${key === 'pro' ? 'bg-green-600 text-white hover:bg-green-500' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'} disabled:opacity-50`}
-                >
-                  {plan.name} — ₹{plan.price}/month
-                </button>
-              ))}
-            </div>
-            <p className="text-gray-400 text-sm">Or <button onClick={() => { setTab('referral'); setShowPaywall(false); }} className="text-green-600 hover:underline font-medium">Refer 1 friend → get 5 more free questions</button></p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
