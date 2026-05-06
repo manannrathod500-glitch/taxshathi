@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -6,10 +6,59 @@ import {
   Users,
   Shield,
   Zap,
-  CheckCircle,
+  X,
 } from 'lucide-react';
 
-export default function LandingPage({ setWaitlistOpen }) {
+function WaitlistModal({ open, onClose }) {
+  const [email, setEmail] = useState('');
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-md w-full relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-zinc-500 hover:text-white"
+        >
+          <X size={18} />
+        </button>
+
+        <div className="mono-label mb-3">Start Free Trial</div>
+
+        <h2 className="text-3xl font-bold text-white mb-4">
+          Join TaxSathi AI
+        </h2>
+
+        <p className="text-zinc-400 text-sm mb-6">
+          Enter your email to get started with TaxSathi AI.
+        </p>
+
+        <form className="space-y-4">
+          <input
+            type="email"
+            required
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white/30"
+          />
+
+          <button
+            type="submit"
+            className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+          >
+            Continue <ArrowRight size={16} />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function LandingPage() {
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
+
   return (
     <div className="bg-[#050505] text-white overflow-hidden">
 
@@ -92,20 +141,13 @@ export default function LandingPage({ setWaitlistOpen }) {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
       <section className="py-28 px-5 border-t border-white/6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <div className="mono-label mb-3">How It Works</div>
-
             <h2 className="text-4xl sm:text-5xl font-bold font-display text-white tracking-tight">
               Get Clients In 3 Simple Steps
             </h2>
-
-            <p className="text-zinc-500 mt-4 max-w-2xl mx-auto">
-              TaxSathi combines AI automation, lead capture, and smart workflows
-              to help you grow your CA or GST practice faster.
-            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -125,15 +167,12 @@ export default function LandingPage({ setWaitlistOpen }) {
               {
                 step: '03',
                 title: 'Convert Into Paying Clients',
-                desc: 'Deliver faster responses, better workflows, and professional experiences that increase trust and conversions.',
+                desc: 'Deliver faster responses and professional experiences that increase trust and conversions.',
                 icon: Shield,
               },
             ].map((s, i) => (
-              <div
-                key={i}
-                className="ts-card p-7 reveal relative overflow-hidden"
-              >
-                <div className="text-[80px] font-bold font-display text-white/3 absolute -top-4 -right-2 leading-none select-none">
+              <div key={i} className="ts-card p-7 reveal relative overflow-hidden">
+                <div className="text-[80px] font-bold font-display text-white/3 absolute -top-4 -right-2">
                   {s.step}
                 </div>
 
@@ -154,82 +193,19 @@ export default function LandingPage({ setWaitlistOpen }) {
         </div>
       </section>
 
-      {/* ── FAQ SECTION ── */}
-      <section className="py-28 px-5 border-t border-white/6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="mono-label mb-3">FAQ</div>
-
-            <h2 className="text-4xl sm:text-5xl font-bold font-display text-white tracking-tight">
-              Common Questions From CAs
-            </h2>
-          </div>
-
-          <div className="space-y-5">
-            {[
-              {
-                q: 'Will AI replace my CA practice?',
-                a: 'No. TaxSathi helps professionals generate more leads, automate repetitive work, and serve more clients efficiently.',
-              },
-              {
-                q: 'What if the GST advice is incorrect?',
-                a: 'TaxSathi is designed as an AI assistant, not a replacement for professional verification. Final filing review remains with the CA.',
-              },
-              {
-                q: 'Do I need technical knowledge?',
-                a: 'No coding or technical setup is required. The platform is designed for simplicity and fast onboarding.',
-              },
-              {
-                q: 'Will small businesses trust AI-generated help?',
-                a: 'Clients still trust human professionals. TaxSathi simply helps you respond faster and appear more professional.',
-              },
-              {
-                q: 'Can this actually help me get more clients?',
-                a: 'Yes. The platform focuses on attracting high-intent GST & ITR users and helping you convert them faster.',
-              },
-            ].map((faq, i) => (
-              <div
-                key={i}
-                className="ts-card p-6"
-              >
-                <h3 className="text-white font-semibold text-lg mb-3">
-                  {faq.q}
-                </h3>
-
-                <p className="text-zinc-500 text-sm leading-relaxed">
-                  {faq.a}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FOUNDER SECTION ── */}
       <section className="py-28 px-5 border-t border-white/6">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="w-20 h-20 mx-auto rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
-            <Zap size={28} className="text-white" />
-          </div>
-
           <div className="mono-label mb-3">Founder</div>
-
           <h2 className="text-4xl sm:text-5xl font-bold font-display text-white tracking-tight mb-6">
             Built by Manan Rathod
           </h2>
-
           <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl mx-auto">
-            Manan Rathod is building AI-first tools for Indian SMBs focused on GST automation,
-            client acquisition systems, compliance workflows, and AI-powered business operations.
+            Building AI-first tools for Indian SMBs focused on GST automation and AI-powered business operations.
           </p>
-
-          <p className="text-zinc-500 mt-5">
-            Based in Gujarat, India 🇮🇳
-          </p>
+          <p className="text-zinc-500 mt-5">Based in Gujarat, India 🇮🇳</p>
         </div>
       </section>
 
-      {/* ── CTA ── */}
       <section className="py-28 px-5 border-t border-white/6">
         <div className="max-w-4xl mx-auto text-center">
           <div className="mono-label mb-3">Start Free</div>
@@ -238,23 +214,19 @@ export default function LandingPage({ setWaitlistOpen }) {
             Start Your Free Trial Today
           </h2>
 
-          <p className="text-zinc-400 text-lg max-w-2xl mx-auto mb-10">
-            Stop depending only on referrals and cold outreach.
-            Build a predictable GST & ITR client pipeline using AI.
-          </p>
-
           <button
             onClick={() => setWaitlistOpen(true)}
             className="btn-primary px-10 py-4 text-base inline-flex items-center gap-2"
           >
             Start Free Trial <ArrowRight size={18} />
           </button>
-
-          <p className="text-zinc-600 text-xs mt-5">
-            No credit card required
-          </p>
         </div>
       </section>
+
+      <WaitlistModal
+        open={waitlistOpen}
+        onClose={() => setWaitlistOpen(false)}
+      />
     </div>
   );
 }
