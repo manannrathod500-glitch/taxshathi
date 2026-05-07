@@ -17,12 +17,31 @@ export default function LandingPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // TODO: Wire Supabase here later
+    try {
+      // TODO: Supabase waitlist insert here
 
-    setSubmitted(true);
-    setName('');
-    setWhatsapp('');
-    setEmail('');
+      await fetch(
+        'https://qjinbmuredxreupqwoqf.supabase.co/functions/v1/send-welcome-email',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            name,
+            email,
+          }),
+        }
+      );
+
+      setSubmitted(true);
+      setName('');
+      setWhatsapp('');
+      setEmail('');
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const faqs = [
