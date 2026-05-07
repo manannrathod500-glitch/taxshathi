@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import {
   ArrowRight,
   Users,
@@ -8,17 +9,38 @@ import {
   MessageCircle,
 } from 'lucide-react';
 
+const supabaseUrl = 'https://qjinbmuredxreupqwoqf.supabase.co';
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 export default function LandingPage() {
   const [name, setName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    setLoading(true);
+    setErrorMessage('');
+
     try {
-      // TODO: Supabase waitlist insert here
+      const { error } = await supabase.from('waitlist').insert([
+        {
+          name,
+          whatsapp,
+          email,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        throw error;
+      }
 
       await fetch(
         'https://qjinbmuredxreupqwoqf.supabase.co/functions/v1/send-welcome-email',
@@ -26,7 +48,7 @@ export default function LandingPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${supabaseAnonKey}`,
           },
           body: JSON.stringify({
             name,
@@ -41,6 +63,9 @@ export default function LandingPage() {
       setEmail('');
     } catch (error) {
       console.error(error);
+      setErrorMessage('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -299,11 +324,19 @@ export default function LandingPage() {
                 className="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-white/30"
               />
 
+              {errorMessage && (
+                <div className="text-red-400 text-sm">
+                  {errorMessage}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="btn-primary w-full py-4 flex items-center justify-center gap-2"
+                disabled={loading}
+                className="btn-primary w-full py-4 flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                Join Waitlist <ArrowRight size={18} />
+                {loading ? 'Submitting...' : 'Join Waitlist'}
+                <ArrowRight size={18} />
               </button>
             </form>
           )}
