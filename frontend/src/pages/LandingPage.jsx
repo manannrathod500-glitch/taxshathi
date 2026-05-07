@@ -38,12 +38,12 @@ function WaitlistModal({ open, onClose }) {
         throw new Error('Supabase environment variables missing');
       }
 
-    const { error } = await supabase.from('waitlist').insert([{
-  name,
-  whatsapp,
-  email,
-  created_at: new Date().toISOString(),
-}]);
+      const { error } = await supabase.from('waitlist').insert([{
+        name,
+        whatsapp,
+        email,
+        created_at: new Date().toISOString(),
+      }]);
 
       if (error) throw error;
 
