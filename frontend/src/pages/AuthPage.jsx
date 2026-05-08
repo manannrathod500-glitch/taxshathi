@@ -38,44 +38,12 @@ const AuthPage = ({ mode: initialMode }) => {
         toast.success('Welcome back!');
         navigate(from, { replace: true });
       } else {
-        if (!form.name.trim()) {
-          toast.error('Name is required');
-          setLoading(false);
-          return;
-        }
-
-        if (!form.business_name.trim()) {
-          toast.error('Business name is required');
-          setLoading(false);
-          return;
-        }
-
-        if (!form.phone.trim()) {
-          toast.error('Phone is required');
-          setLoading(false);
-          return;
-        }
-
-        if (form.password.length < 6) {
-          toast.error('Password must be at least 6 characters');
-          setLoading(false);
-          return;
-        }
-
-        await register(
-          form.name,
-          form.business_name,
-          form.phone,
-          form.email,
-          form.password,
-          form.referral_code
-        );
-
-        toast.success('Account created! You get 10 free questions.');
+        await register(form.name, form.business_name, form.phone, form.email, form.password, form.referral_code);
+        toast.success('Account created!');
         navigate(from, { replace: true });
       }
     } catch (err) {
-      toast.error(err.message || 'Something went wrong. Please try again.');
+      toast.error(err.message || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -86,11 +54,7 @@ const AuthPage = ({ mode: initialMode }) => {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans flex flex-col">
       <div className="px-4 sm:px-8 py-6">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors text-sm"
-          data-testid="auth-back-btn"
-        >
+        <Link to="/" className="inline-flex items-center gap-2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors text-sm">
           <ArrowLeft size={16} /> Back to Home
         </Link>
       </div>
@@ -99,158 +63,12 @@ const AuthPage = ({ mode: initialMode }) => {
         <div className="w-full max-w-md mx-auto">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[rgba(255,255,255,0.1)] flex items-center justify-center">
-               <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="4" y="2" width="26" height="32" rx="3" stroke="#2563eb" strokeWidth="2" fill="none"/>
-  <line x1="10" y1="12" x2="20" y2="12" stroke="#2563eb" strokeWidth="2"/>
-  <line x1="10" y1="16" x2="16" y2="16" stroke="#2563eb" strokeWidth="2"/>
-  <circle cx="17" cy="26" r="2" stroke="#2563eb" strokeWidth="1.5" fill="none"/>
-  <line x1="17" y1="24" x2="17" y2="20" stroke="#2563eb" strokeWidth="1.5"/>
-  <line x1="17" y1="28" x2="13" y2="31" stroke="#2563eb" strokeWidth="1.5"/>
-  <line x1="17" y1="28" x2="21" y2="31" stroke="#2563eb" strokeWidth="1.5"/>
-</svg>
-              </div>
-              <span className="text-white font-bold text-2xl sm:text-3xl tracking-tight">
-                TaxSathi AI
-              </span>
+              <img src="/logo.jpeg.jpeg" alt="TaxSathi" className="w-10 h-10 rounded-lg object-cover" />
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-white">
               {mode === 'login' ? 'Welcome back' : 'Start your free trial'}
             </h1>
-
-            <p className="text-[rgba(255,255,255,0.6)] text-sm mt-2 leading-relaxed px-2">
-              {mode === 'login'
-                ? 'Login to your GST advisor dashboard'
-                : refCode
-                  ? 'Referred by a friend — you get 5 bonus questions!'
-                  : '10 free AI checks per month, no credit card needed'}
-            </p>
-          </div>
-
-          <div
-            className="w-full rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] backdrop-blur-xl p-4 sm:p-8"
-          >
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'register' && (
-                <>
-                  <div>
-                    <label className="text-[rgba(255,255,255,0.6)] text-sm mb-1.5 block">Full Name</label>
-                    <div className="relative">
-                      <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.4)]" />
-                      <input
-                        data-testid="register-name-input"
-                        type="text"
-                        value={form.name}
-                        onChange={e => update('name', e.target.value)}
-                        required
-                        placeholder="Ramesh Patel"
-                        className={inputClassName}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[rgba(255,255,255,0.6)] text-sm mb-1.5 block">Business Name</label>
-                    <div className="relative">
-                      <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.4)]" />
-                      <input
-                        data-testid="register-business-name-input"
-                        type="text"
-                        value={form.business_name}
-                        onChange={e => update('business_name', e.target.value)}
-                        required
-                        placeholder="ABC Enterprises"
-                        className={inputClassName}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[rgba(255,255,255,0.6)] text-sm mb-1.5 block">Phone Number</label>
-                    <div className="relative">
-                      <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.4)]" />
-                      <input
-                        data-testid="register-phone-input"
-                        type="tel"
-                        value={form.phone}
-                        onChange={e => update('phone', e.target.value)}
-                        required
-                        placeholder="+91 98765 43210"
-                        className={inputClassName}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="text-[rgba(255,255,255,0.6)] text-sm mb-1.5 block">Email Address</label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.4)]" />
-                  <input
-                    data-testid="auth-email-input"
-                    type="email"
-                    value={form.email}
-                    onChange={e => update('email', e.target.value)}
-                    required
-                    placeholder="you@example.com"
-                    className={inputClassName}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[rgba(255,255,255,0.6)] text-sm mb-1.5 block">Password</label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.4)]" />
-                  <input
-                    data-testid="auth-password-input"
-                    type={showPass ? 'text' : 'password'}
-                    value={form.password}
-                    onChange={e => update('password', e.target.value)}
-                    required
-                    placeholder={mode === 'register' ? 'Min 6 characters' : 'Your password'}
-                    className={`${inputClassName} pr-10`}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.4)] hover:text-white"
-                  >
-                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {mode === 'register' && (
-                <div>
-                  <label className="text-[rgba(255,255,255,0.6)] text-sm mb-1.5 block">
-                    Referral Code <span className="text-[rgba(255,255,255,0.35)]">(optional)</span>
-                  </label>
-                  <input
-                    data-testid="register-referral-input"
-                    type="text"
-                    value={form.referral_code}
-                    onChange={e => update('referral_code', e.target.value)}
-                    placeholder="Enter referral code"
-                    className="w-full min-h-[44px] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-xl px-4 py-3 text-white text-sm placeholder:text-[rgba(255,255,255,0.35)] focus:outline-none focus:border-[#16a34a]"
-                  />
-                </div>
-              )}
-
-              <button
-                data-testid="auth-submit-btn"
-                type="submit"
-                disabled={loading}
-                className="w-full min-h-[44px] rounded-xl bg-[#16a34a] hover:bg-green-500 disabled:opacity-60 text-white text-sm font-semibold transition-all flex items-center justify-center gap-2"
-              >
-                {loading
-                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Processing...</>
-                  : mode === 'login' ? 'Login to Dashboard' : 'Create Free Account'}
-              </button>
-            </form>
           </div>
         </div>
       </div>
