@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Shield, Eye, EyeOff, ArrowLeft, Mail, Lock } from 'lucide-react';
+import { Shield, Eye, EyeOff, ArrowLeft, Mail, Lock, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const AuthPage = ({ mode: initialMode }) => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const mode = initialMode || (searchParams.get('mode') === 'register' ? 'register' : 'login');
+
+  const mode = initialMode || (searchParams.get('mode') === 'register' ? 'register' : location.pathname.includes('register') ? 'register' : 'login');
 
   const [form, setForm] = useState({
+    name: '',
     email: '',
     password: '',
   });
@@ -17,7 +19,7 @@ const AuthPage = ({ mode: initialMode }) => {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const navigate = useNavigate();
 
   const from = location.state?.from?.pathname || '/dashboard';
@@ -29,8 +31,14 @@ const AuthPage = ({ mode: initialMode }) => {
     setLoading(true);
 
     try {
-      await login(form.email, form.password);
-      toast.success('Welcome back!');
+      if (mode === 'login') {
+        await login(form.email, form.password);
+        toast.success('Welcome back!');
+      } else {
+        await register(form.name, '', '', form.email, form.password, '');
+        toast.success('Account created successfully!');
+      }
+
       navigate(from, { replace: true });
     } catch (err) {
       toast.error(err.message || 'Something went wrong. Please try again.');
@@ -66,16 +74,39 @@ const AuthPage = ({ mode: initialMode }) => {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-white">
-              Login to Dashboard
+              {mode === 'login' ? 'Login to Dashboard' : 'Create your account'}
             </h1>
 
             <p className="text-[rgba(255,255,255,0.6)] text-sm mt-2">
-              Access your GST advisor dashboard
+              {mode === 'login'
+                ? 'Access your GST advisor dashboard'
+                : 'Start using TaxSathi today'}
             </p>
           </div>
 
           <div className="w-full rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] backdrop-blur-xl p-4 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === 'register' && (
+                <div>
+                  <label className="text-[rgba(255,255,255,0.6)] text-sm mb-1.5 block">
+                    Full Name
+                  </label>
+
+                  <div className="relative">
+                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.4)]" />
+
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={e => update('name', e.target.value)}
+                      required
+                      placeholder="Your full name"
+                      className={inputClassName}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-[rgba(255,255,255,0.6)] text-sm mb-1.5 block">
                   Email Address
@@ -129,17 +160,28 @@ const AuthPage = ({ mode: initialMode }) => {
               >
                 {loading
                   ? 'Processing...'
-                  : 'Login to Dashboard'}
+                  : mode === 'login'
+                    ? 'Login to Dashboard'
+                    : 'Create Account'}
               </button>
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-[rgba(255,255,255,0.6)] text-sm">
-                Don't have an account?{' '}
-                <Link to="/register" className="text-green-400 hover:text-green-300 font-medium">
-                  Register free
-                </Link>
-              </p>
+              {mode === 'login' ? (
+                <p className="text-[rgba(255,255,255,0.6)] text-sm">
+                  Don't have an account?{' '}
+                  <Link to="/register" className="text-green-400 hover:text-green-300 font-medium">
+                    Register free
+                  </Link>
+                </p>
+              ) : (
+                <p className="text-[rgba(255,255,255,0.6)] text-sm">
+                  Already have an account?{' '}
+                  <Link to="/login" className="text-green-400 hover:text-green-300 font-medium">
+                    Login
+                  </Link>
+                </p>
+              )}
             </div>
           </div>
         </div>
