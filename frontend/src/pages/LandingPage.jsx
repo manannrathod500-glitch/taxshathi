@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import {
   ArrowRight,
@@ -94,7 +95,25 @@ export default function LandingPage() {
 
   return (
     <div className="bg-[#0a0a0a] text-white overflow-hidden">
-      <section className="blueprint-grid relative min-h-screen flex items-center justify-center px-5 py-24 overflow-hidden border-b border-white/6">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[rgba(0,0,0,0.8)] backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <Link
+            to="/"
+            className="text-white text-xl sm:text-2xl font-bold tracking-tight"
+          >
+            TaxSathi AI
+          </Link>
+
+          <Link
+            to="/login"
+            className="border border-white text-white px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold transition-all hover:bg-white hover:text-black"
+          >
+            Login
+          </Link>
+        </div>
+      </nav>
+
+      <section className="blueprint-grid relative min-h-screen flex items-center justify-center px-5 pt-32 pb-24 overflow-hidden border-b border-white/6">
         <div className="hero-glow" />
 
         <div className="relative z-10 max-w-5xl mx-auto text-center">
@@ -137,209 +156,6 @@ export default function LandingPage() {
               WhatsApp Us
             </a>
           </div>
-        </div>
-      </section>
-
-      <section className="py-28 px-5 border-b border-white/6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="mono-label mb-3">How It Works</div>
-            <h2 className="text-4xl sm:text-5xl font-bold font-display tracking-tight">
-              Get Clients In 3 Simple Steps
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                step: '01',
-                title: 'Capture High-Intent Leads',
-                desc: 'TaxSathi helps attract people actively searching for GST filing, ITR help, notices, and compliance support.',
-                icon: Users,
-              },
-              {
-                step: '02',
-                title: 'Engage Automatically',
-                desc: 'AI handles FAQs, reminders, follow-ups, and qualification so you spend less time chasing prospects.',
-                icon: Zap,
-              },
-              {
-                step: '03',
-                title: 'Convert Into Paying Clients',
-                desc: 'Deliver faster responses and professional experiences that increase trust and conversions.',
-                icon: Shield,
-              },
-            ].map((s, i) => (
-              <div key={i} className="ts-card p-7 relative overflow-hidden border border-white/10 rounded-3xl bg-[#0d0d0d]">
-                <div className="text-[80px] font-bold font-display text-white/5 absolute -top-4 -right-2">
-                  {s.step}
-                </div>
-
-                <div className="w-10 h-10 bg-white/6 border border-white/10 rounded-xl flex items-center justify-center mb-5">
-                  <s.icon size={18} className="text-zinc-300" />
-                </div>
-
-                <div className="text-white font-semibold text-base mb-2 font-display">
-                  {s.title}
-                </div>
-
-                <div className="text-zinc-500 text-sm leading-relaxed">
-                  {s.desc}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-28 px-5 border-b border-white/6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="mono-label mb-3">Pricing</div>
-            <h2 className="text-4xl sm:text-5xl font-bold font-display tracking-tight">
-              Simple Pricing
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                title: 'Starter',
-                price: '₹999/mo',
-                features: ['Lead dashboard', 'Basic GST tools', 'Email support'],
-              },
-              {
-                title: 'Pro',
-                price: '₹2999/mo',
-                features: ['AI automation', 'Client workflows', 'Priority support'],
-              },
-              {
-                title: 'Enterprise',
-                price: 'Coming Soon',
-                features: ['Custom integrations', 'Dedicated onboarding', 'Advanced analytics'],
-              },
-            ].map((plan, index) => (
-              <div key={index} className="border border-white/10 rounded-3xl p-8 bg-[#0d0d0d]">
-                <h3 className="text-3xl font-bold mb-3">{plan.title}</h3>
-                <div className="text-4xl font-display text-zinc-100 mb-8">
-                  {plan.price}
-                </div>
-
-                <div className="space-y-4">
-                  {plan.features.map((feature, i) => (
-                    <div key={i} className="flex items-center gap-2 text-zinc-400 text-sm">
-                      <Check size={15} />
-                      {feature}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-28 px-5 border-b border-white/6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="mono-label mb-3">FAQ</div>
-            <h2 className="text-4xl sm:text-5xl font-bold font-display tracking-tight">
-              Common Questions
-            </h2>
-          </div>
-
-          <div className="space-y-5">
-            {faqs.map((faq, index) => (
-              <div key={index} className="border border-white/10 rounded-3xl p-7 bg-[#0d0d0d]">
-                <h3 className="text-xl font-semibold mb-3">{faq.q}</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed">
-                  {faq.a}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-28 px-5 border-b border-white/6">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="mono-label mb-3">Founder</div>
-
-          <h2 className="text-4xl sm:text-5xl font-bold font-display tracking-tight mb-6">
-            Built by Manan Rathod
-          </h2>
-
-          <p className="text-zinc-400 text-lg leading-relaxed max-w-3xl mx-auto">
-            Building AI-first tools for Indian SMBs focused on GST automation and AI-powered business operations.
-          </p>
-
-          <p className="text-zinc-500 mt-5">
-            Based in Gujarat, India 🇮🇳
-          </p>
-        </div>
-      </section>
-
-      <section className="py-28 px-5">
-        <div className="max-w-xl mx-auto text-center">
-          <div className="mono-label mb-3">Start Free</div>
-
-          <h2 className="text-5xl font-bold font-display tracking-tight mb-6">
-            Start Your Free Trial Today
-          </h2>
-
-          <p className="text-zinc-400 mb-10 text-sm leading-relaxed">
-            Join TaxSathi AI and simplify GST & ITR workflows with AI-powered automation.
-          </p>
-
-          {submitted ? (
-            <div className="border border-green-500/20 bg-green-500/10 rounded-2xl p-5 text-green-300 text-sm">
-              Thank you! Your details have been submitted successfully.
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4 text-left">
-              <input
-                type="text"
-                required
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-white/30"
-              />
-
-              <input
-                type="tel"
-                required
-                placeholder="WhatsApp Number"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-white/30"
-              />
-
-              <input
-                type="email"
-                required
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-white/30"
-              />
-
-              {errorMessage && (
-                <div className="text-red-400 text-sm">
-                  {errorMessage}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary w-full py-4 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {loading ? 'Submitting...' : 'Join Waitlist'}
-                <ArrowRight size={18} />
-              </button>
-            </form>
-          )}
         </div>
       </section>
     </div>
