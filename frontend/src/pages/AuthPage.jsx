@@ -100,7 +100,15 @@ const AuthPage = ({ mode: initialMode }) => {
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-[rgba(255,255,255,0.1)] flex items-center justify-center">
-                <Shield size={20} className="text-white" />
+               <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="2" width="26" height="32" rx="3" stroke="#2563eb" strokeWidth="2" fill="none"/>
+  <line x1="10" y1="12" x2="20" y2="12" stroke="#2563eb" strokeWidth="2"/>
+  <line x1="10" y1="16" x2="16" y2="16" stroke="#2563eb" strokeWidth="2"/>
+  <circle cx="17" cy="26" r="2" stroke="#2563eb" strokeWidth="1.5" fill="none"/>
+  <line x1="17" y1="24" x2="17" y2="20" stroke="#2563eb" strokeWidth="1.5"/>
+  <line x1="17" y1="28" x2="13" y2="31" stroke="#2563eb" strokeWidth="1.5"/>
+  <line x1="17" y1="28" x2="21" y2="31" stroke="#2563eb" strokeWidth="1.5"/>
+</svg>
               </div>
               <span className="text-white font-bold text-2xl sm:text-3xl tracking-tight">
                 TaxSathi AI
