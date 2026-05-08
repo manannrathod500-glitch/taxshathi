@@ -99,8 +99,8 @@ const AuthPage = ({ mode: initialMode }) => {
         <div className="w-full max-w-md mx-auto">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#16a34a] flex items-center justify-center">
-                <Shield size={20} className="text-black" />
+              <div className="w-10 h-10 rounded-xl bg-[rgba(255,255,255,0.1)] flex items-center justify-center">
+                <Shield size={20} className="text-white" />
               </div>
               <span className="text-white font-bold text-2xl sm:text-3xl tracking-tight">
                 TaxSathi AI
