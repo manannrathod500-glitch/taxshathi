@@ -22,6 +22,81 @@ const QUICK_QUESTIONS = [
   "TDS kab katna padta hai?",
 ];
 
+// Simple markdown renderer
+const renderMarkdown = (text) => {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    // Table rows
+    if (line.startsWith('|')) {
+      const cells = line.split('|').filter(c => c.trim() !== '');
+      const isSeparator = cells.every(c => /^[-\s]+$/.test(c));
+      if (isSeparator) return null;
+      return (
+        <div key={i} className="flex gap-2 text-xs border-b border-white/10 py-1">
+          {cells.map((cell, j) => (
+            <span key={j} className="flex-1 text-white/80">{formatInline(cell.trim())}</span>
+          ))}
+        </div>
+      );
+    }
+    // Numbered list
+    if (/^\d+\./.test(line)) {
+      return (
+        <div key={i} className="flex gap-2 my-0.5">
+          <span className="text-green-400 font-bold text-xs mt-0.5">{line.match(/^\d+/)[0]}.</span>
+          <span>{formatInline(line.replace(/^\d+\.\s*/, ''))}</span>
+        </div>
+      );
+    }
+    // Bullet list
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      return (
+        <div key={i} className="flex gap-2 my-0.5">
+          <span className="text-green-400 mt-1">•</span>
+          <span>{formatInline(line.slice(2))}</span>
+        </div>
+      );
+    }
+    // Sub bullet
+    if (line.startsWith('  - ') || line.startsWith('  * ')) {
+      return (
+        <div key={i} className="flex gap-2 my-0.5 ml-4">
+          <span className="text-green-300 mt-1">◦</span>
+          <span>{formatInline(line.slice(4))}</span>
+        </div>
+      );
+    }
+    // Blockquote
+    if (line.startsWith('> ')) {
+      return (
+        <div key={i} className="border-l-2 border-green-500 pl-2 my-1 text-white/60 italic">
+          {formatInline(line.slice(2))}
+        </div>
+      );
+    }
+    // Empty line
+    if (line.trim() === '') return <div key={i} className="h-2" />;
+    // Normal line
+    return <div key={i}>{formatInline(line)}</div>;
+  }).filter(Boolean);
+};
+
+// Inline formatting — bold, italic
+const formatInline = (text) => {
+  const parts = [];
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+  let last = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    if (match[2]) parts.push(<strong key={match.index} className="text-white font-semibold">{match[2]}</strong>);
+    else if (match[3]) parts.push(<em key={match.index} className="text-white/80 italic">{match[3]}</em>);
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length > 0 ? parts : text;
+};
+
 export default function GSTAssistant() {
   const [messages, setMessages] = useState([
     {
@@ -93,6 +168,7 @@ export default function GSTAssistant() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col">
+      {/* Header */}
       <div className="border-b border-white/10 px-4 py-3 flex items-center gap-3">
         <Link to="/dashboard" className="text-white/50 hover:text-white transition-colors">
           <ArrowLeft size={20} />
@@ -114,14 +190,15 @@ export default function GSTAssistant() {
         </button>
       </div>
 
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
             <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'assistant' ? 'bg-green-500/20' : 'bg-blue-500/20'}`}>
               {msg.role === 'assistant' ? <Bot size={14} className="text-green-400" /> : <User size={14} className="text-blue-400" />}
             </div>
-            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${msg.role === 'assistant' ? 'bg-white/5 text-white/90' : 'bg-blue-600 text-white'}`}>
-              {msg.content}
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${msg.role === 'assistant' ? 'bg-white/5 text-white/90' : 'bg-blue-600 text-white'}`}>
+              {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
             </div>
           </div>
         ))}
@@ -138,6 +215,7 @@ export default function GSTAssistant() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Quick Questions */}
       {messages.length <= 1 && (
         <div className="px-4 pb-2 flex gap-2 flex-wrap">
           {QUICK_QUESTIONS.map((q, i) => (
@@ -152,6 +230,7 @@ export default function GSTAssistant() {
         </div>
       )}
 
+      {/* Input */}
       <div className="border-t border-white/10 px-4 py-3 flex gap-2">
         <input
           type="text"
