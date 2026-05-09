@@ -47,10 +47,18 @@ export default function GSTAssistant() {
     setLoading(true);
 
     try {
-      const history = newMessages.map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-      }));
+      // Only send user messages and assistant replies, always starting with user
+      const history = newMessages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        }));
+
+      // Remove leading model messages — Gemini requires first message to be user
+      while (history.length > 0 && history[0].role === 'model') {
+        history.shift();
+      }
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -64,10 +72,17 @@ export default function GSTAssistant() {
         }
       );
 
+      if (!response.ok) {
+        const errData = await response.json();
+        console.error('Gemini API error:', errData);
+        throw new Error('API error');
+      }
+
       const data = await response.json();
       const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Kuch galat ho gaya. Dobara try karein.';
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err) {
+      console.error('sendMessage error:', err);
       setMessages(prev => [...prev, { role: 'assistant', content: '❌ Error aaya. Internet check karein aur dobara try karein.' }]);
     } finally {
       setLoading(false);
