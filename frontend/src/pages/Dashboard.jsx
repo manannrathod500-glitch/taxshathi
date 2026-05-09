@@ -51,8 +51,9 @@ export default function Dashboard() {
   const loadHistory = async () => {
     try {
       const res = await axios.get(`${API}/conversations`);
-      setHistory(res.data || []);
+      setHistory(Array.isArray(res.data) ? res.data : []);
     } catch {
+      setHistory([]);
       toast.error('Could not load history');
     }
   };
@@ -113,7 +114,7 @@ export default function Dashboard() {
           </div>
 
           <nav className="space-y-2">
-            {tabs.map((item) => {
+            {(Array.isArray(tabs) ? tabs : []).map((item) => {
               const Icon = item.icon;
               const active = tab === item.id;
 
@@ -191,7 +192,7 @@ export default function Dashboard() {
         </header>
 
         <div className="lg:hidden border-b border-zinc-800 bg-black px-3 py-3 flex gap-2 overflow-x-auto">
-          {tabs.map((item) => {
+          {(Array.isArray(tabs) ? tabs : []).map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
 
@@ -225,13 +226,13 @@ export default function Dashboard() {
               <p className="text-gray-400 mb-8">Your previous TaxSathi AI conversations.</p>
 
               <div className="space-y-4">
-                {history.length === 0 && (
+                {(Array.isArray(history) ? history : []).length === 0 && (
                   <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8 text-center text-gray-400">
                     No conversations yet.
                   </div>
                 )}
 
-                {history.map((item, index) => (
+                {(Array.isArray(history) ? history : []).map((item, index) => (
                   <div
                     key={index}
                     className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5 hover:border-green-500/30 transition-all"
@@ -258,7 +259,7 @@ export default function Dashboard() {
               <p className="text-gray-400 mb-8">Upgrade your TaxSathi AI experience.</p>
 
               <div className="grid lg:grid-cols-3 gap-6">
-                {Object.entries(PLANS).map(([key, value]) => (
+                {(Array.isArray(Object.entries(PLANS)) ? Object.entries(PLANS) : []).map(([key, value]) => (
                   <div
                     key={key}
                     className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 hover:border-green-500/30 transition-all"
