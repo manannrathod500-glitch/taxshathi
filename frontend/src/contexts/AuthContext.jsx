@@ -15,12 +15,11 @@ export const AuthProvider = ({ children }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
-      
+        
       if (error) {
         console.error("Error fetching profile:", error);
       } else {
-        setProfile(data);
+         setProfile(data?.[0] || null);
       }
     } catch (err) {
       console.error(err);
