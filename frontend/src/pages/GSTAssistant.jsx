@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Send, Trash2, Bot, User, Loader2 } from 'lucide-react';
 
-const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.REACT_APP_DEEPSEEK_API_KEY;
 
 const SYSTEM_PROMPT = `You are TaxSathi AI — an expert Indian tax assistant. You help Indian CAs, tax professionals, and SMB owners with:
 - GST (Goods and Services Tax) questions
@@ -47,43 +47,45 @@ export default function GSTAssistant() {
     setLoading(true);
 
     try {
-      // Only send user messages and assistant replies, always starting with user
       const history = newMessages
         .filter(m => m.role === 'user' || m.role === 'assistant')
         .map(m => ({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.content }]
+          role: m.role,
+          content: m.content
         }));
 
-      // Remove leading model messages — Gemini requires first message to be user
-      while (history.length > 0 && history[0].role === 'model') {
-        history.shift();
-      }
-
       const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        'https://api.deepseek.com/chat/completions',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
           body: JSON.stringify({
-            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: history
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              ...history
+            ],
+            max_tokens: 1000,
+            temperature: 0.7
           })
         }
       );
 
       if (!response.ok) {
         const errData = await response.json();
-        console.error('Gemini API error:', errData);
+        console.error('DeepSeek API error:', errData);
         throw new Error('API error');
       }
 
       const data = await response.json();
-      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Kuch galat ho gaya. Dobara try karein.';
+      const reply = data?.choices?.[0]?.message?.content || 'Kuch galat ho gaya. Dobara try karein.';
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err) {
       console.error('sendMessage error:', err);
-      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Error aaya. Internet check karein aur dobara try karein.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Error aaya. Dobara try karein.' }]);
     } finally {
       setLoading(false);
     }
@@ -91,7 +93,6 @@ export default function GSTAssistant() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col">
-      {/* Header */}
       <div className="border-b border-white/10 px-4 py-3 flex items-center gap-3">
         <Link to="/dashboard" className="text-white/50 hover:text-white transition-colors">
           <ArrowLeft size={20} />
@@ -113,7 +114,6 @@ export default function GSTAssistant() {
         </button>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -138,7 +138,6 @@ export default function GSTAssistant() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Quick Questions */}
       {messages.length <= 1 && (
         <div className="px-4 pb-2 flex gap-2 flex-wrap">
           {QUICK_QUESTIONS.map((q, i) => (
@@ -153,7 +152,6 @@ export default function GSTAssistant() {
         </div>
       )}
 
-      {/* Input */}
       <div className="border-t border-white/10 px-4 py-3 flex gap-2">
         <input
           type="text"
