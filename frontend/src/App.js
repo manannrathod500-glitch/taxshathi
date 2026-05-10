@@ -9,10 +9,10 @@ import GSTAssistant from '@/pages/GSTAssistant';
 import InvoiceEngine from '@/pages/InvoiceEngine';
 import AuthPage from '@/pages/AuthPage';
 import Dashboard from '@/pages/Dashboard';
+import CAPublicChat from '@/pages/CAPublicChat';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import '@/App.css';
 
-// Scroll reveal observer
 const useScrollReveal = () => {
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -42,16 +42,12 @@ function AppWithReveal() {
       <Route path="/demo" element={<DemoPage />} />
       <Route path="/analyzer" element={<ModuleAnalyzer />} />
       <Route path="/progress" element={<ProgressTracker />} />
-      
-      {/* Auth Routes */}
+      <Route path="/ca/:slug" element={<CAPublicChat />} />
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/register" element={<AuthPage mode="register" />} />
-      
-      {/* Protected Routes */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/gst-assistant" element={<ProtectedRoute><GSTAssistant /></ProtectedRoute>} />
       <Route path="/invoice" element={<ProtectedRoute><InvoiceEngine /></ProtectedRoute>} />
-      
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -62,13 +58,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <AppWithReveal />
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: { background: '#0a0a0a', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '14px' },
-            success: { iconTheme: { primary: '#22c55e', secondary: '#000' } }
-          }}
-        />
+        <Toaster position="top-right" />
       </BrowserRouter>
     </AuthProvider>
   );
