@@ -81,7 +81,7 @@ const TABS = [
  
 // ── Main Component ───────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { user, signOut } = useAuth();
+ const { user, logout } = useAuth();
   const navigate = useNavigate();
  
   const [isDark, setIsDark] = useState(true);
