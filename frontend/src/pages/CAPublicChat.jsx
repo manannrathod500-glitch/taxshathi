@@ -1,7 +1,7 @@
 import GSTAssistant from './GSTAssistant';
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from "../lib/supabaseClient";
 
 export default function CAPublicChat() {
   const { slug } = useParams();
