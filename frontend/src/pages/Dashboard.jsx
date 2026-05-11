@@ -1,327 +1,270 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
-import {
-  MessageSquare,
-  History,
-  CreditCard,
-  Gift,
-  Sparkles,
-  Crown,
-  LogOut,
-  ArrowRight
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import toast from 'react-hot-toast';
-import GSTAssistant from './GSTAssistant';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-
-const PLANS = {
-  basic: { name: 'Basic', price: 1500 },
-  pro: { name: 'Pro', price: 1800 },
-  premium: { name: 'Premium', price: 2000 }
-};
+import { useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
+import GSTAssistant from "./GSTAssistant";
 
 export default function Dashboard() {
-  const { user, profile, logout } = useAuth();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [profile, setProfile] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [queryCount, setQueryCount] = useState(0);
+  const [copied, setCopied] = useState(false);
 
-  const [tab, setTab] = useState('chat');
-  const [history, setHistory] = useState([]);
-  const [referralStats, setReferralStats] = useState(null);
-  const [subscribeLoading, setSubscribeLoading] = useState(false);
-
-  const questionsUsed = profile?.ai_calls_this_month || 0;
-  const bonusQ = profile?.bonus_questions || 0;
-  const planFree = profile?.plan !== 'pro' && profile?.plan !== 'premium';
-  const totalFreeAvailable = planFree ? Math.max(0, (10 - questionsUsed) + bonusQ) : 'Unlimited';
+  const slug = profile?.ca_slug || user?.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "ca";
+  const shareLink = `https://taxsathi.online/ca/${slug}`;
 
   useEffect(() => {
-    if (tab === 'history') loadHistory();
-    if (tab === 'referral') loadReferral();
-  }, [tab]);
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setProfile(data));
 
-  useEffect(() => {
-    const plan = searchParams.get('subscribe');
-    if (plan && PLANS[plan]) handleSubscribe(plan);
-  }, [searchParams]);
+    supabase
+      .from("client_queries")
+      .select("id, client_name, client_phone, query_summary, created_at")
+      .eq("ca_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10)
+      .then(({ data }) => setClients(data || []));
 
-  const loadHistory = async () => {
-    try {
-      const res = await axios.get(`${API}/conversations`);
-      setHistory(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      setHistory([]);
-      toast.error('Could not load history');
-    }
+    supabase
+      .from("client_queries")
+      .select("id", { count: "exact" })
+      .eq("ca_id", user.id)
+      .gte("created_at", new Date(Date.now() - 86400000).toISOString())
+      .then(({ count }) => setQueryCount(count || 0));
+  }, [user]);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const loadReferral = async () => {
-    try {
-      const res = await axios.get(`${API}/referral/stats`);
-      setReferralStats(res.data);
-    } catch {
-      toast.error('Could not load referral stats');
-    }
+  const sendWhatsApp = () => {
+    const msg = encodeURIComponent(
+      `Namaste! 🙏 Hu CA ${profile?.full_name || ""} no GST AI Assistant share karu chu.\n\nAa link kholsho to Gujarati, Hindi, English ma tamara GST/ITR na sawalo na jawab malse — 24/7, FREE!\n\n👉 ${shareLink}`
+    );
+    window.open(`https://wa.me/?text=${msg}`, "_blank");
   };
 
-  const handleSubscribe = async (plan) => {
-    setSubscribeLoading(true);
-
-    try {
-      await axios.post(`${API}/subscribe`, {
-        plan,
-        payment_id: `mock_${Date.now()}`
-      });
-
-      toast.success(`Subscribed to ${PLANS[plan]?.name} plan!`);
-    } catch {
-      toast.error('Subscription failed');
-    } finally {
-      setSubscribeLoading(false);
-    }
+  const downloadQR = () => {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareLink)}`;
+    const a = document.createElement("a");
+    a.href = qrUrl;
+    a.download = "taxsathi-qr.png";
+    a.target = "_blank";
+    a.click();
   };
 
-  const copyReferral = () => {
-    if (referralStats?.referral_link) {
-      navigator.clipboard.writeText(referralStats.referral_link);
-      toast.success('Referral link copied!');
-    }
+  const initials = (name) => {
+    if (!name) return "?";
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const tabs = [
-    { id: 'chat', label: 'AI Chat', icon: MessageSquare },
-    { id: 'history', label: 'History', icon: History },
-    { id: 'subscription', label: 'Subscription', icon: CreditCard },
-    { id: 'referral', label: 'Refer & Earn', icon: Gift }
-  ];
+  const timeAgo = (dateStr) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins} min ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} hr ago`;
+    return `${Math.floor(hrs / 24)} days ago`;
+  };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex">
-      <aside className="w-72 border-r border-zinc-800 bg-black/40 backdrop-blur-xl hidden lg:flex flex-col">
-        <div className="p-6 flex-1">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-12 h-12 rounded-2xl bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/20">
-              <Sparkles className="w-6 h-6 text-black" />
-            </div>
-
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">TaxSathi AI</h1>
-              <p className="text-sm text-gray-400">AI Tax Assistant</p>
-            </div>
+    <div style={{ minHeight: "100vh", background: "#050505", color: "#fff", fontFamily: "sans-serif" }}>
+      {/* Top Bar */}
+      <div style={{ background: "#0a0a0a", borderBottom: "0.5px solid #1a1a1a", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#fff" }}>TaxSathi AI</div>
+          <div style={{ fontSize: 11, color: "#22c55e" }}>CA Dashboard</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "#fff" }}>{profile?.full_name || user?.email}</div>
+            <div style={{ fontSize: 11, color: "#666" }}>Rajkot, Gujarat</div>
           </div>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1a3a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, color: "#22c55e" }}>
+            {initials(profile?.full_name || user?.email)}
+          </div>
+        </div>
+      </div>
 
-          <nav className="space-y-2">
-            {(Array.isArray(tabs) ? tabs : []).map((item) => {
-              const Icon = item.icon;
-              const active = tab === item.id;
+      {/* Nav Tabs */}
+      <div style={{ display: "flex", background: "#0a0a0a", borderBottom: "0.5px solid #1a1a1a" }}>
+        {["overview", "clients", "share", "plan"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{ flex: 1, padding: "12px 4px", background: "transparent", border: "none", borderBottom: activeTab === tab ? "2px solid #22c55e" : "2px solid transparent", color: activeTab === tab ? "#22c55e" : "#555", fontSize: 12, cursor: "pointer", textTransform: "capitalize", fontWeight: activeTab === tab ? 600 : 400 }}
+          >
+            {tab === "share" ? "Share Tool" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
 
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 ${
-                    active
-                      ? 'bg-green-500 text-black shadow-lg shadow-green-500/20'
-                      : 'text-gray-300 hover:bg-zinc-900 hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
+      <div style={{ padding: "16px" }}>
+
+        {/* OVERVIEW TAB */}
+        {activeTab === "overview" && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 10, padding: 14 }}>
+                <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>Total clients</div>
+                <div style={{ fontSize: 26, fontWeight: 600, color: "#fff" }}>{clients.length}</div>
+                <div style={{ fontSize: 10, color: "#22c55e", marginTop: 2 }}>using your AI link</div>
+              </div>
+              <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 10, padding: 14 }}>
+                <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>AI queries today</div>
+                <div style={{ fontSize: 26, fontWeight: 600, color: "#fff" }}>{queryCount}</div>
+                <div style={{ fontSize: 10, color: "#22c55e", marginTop: 2 }}>~{Math.round(queryCount * 3)} min saved</div>
+              </div>
+            </div>
+
+            {/* Share Card Summary */}
+            <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 12, padding: 14, marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: "#666", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Your client link</div>
+              <div style={{ background: "#050505", border: "0.5px solid #333", borderRadius: 8, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 12, color: "#22c55e", fontFamily: "monospace" }}>{shareLink}</span>
+                <button onClick={copyLink} style={{ fontSize: 11, background: "#22c55e", color: "#000", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 600 }}>
+                  {copied ? "Copied!" : "Copy"}
                 </button>
-              );
-            })}
-          </nav>
-
-          <div className="mt-10 rounded-3xl border border-zinc-800 bg-zinc-950 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Crown className="w-5 h-5 text-green-400" />
-              <h3 className="font-semibold">Upgrade Plan</h3>
+              </div>
+              <button onClick={sendWhatsApp} style={{ width: "100%", background: "#22c55e", color: "#000", border: "none", borderRadius: 8, padding: "11px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                📤 Send to clients on WhatsApp
+              </button>
             </div>
 
-            <p className="text-sm text-gray-400 leading-relaxed mb-5">
-              Unlock unlimited AI questions, premium GST support, faster replies and future CA features.
-            </p>
+            {/* Recent Activity */}
+            <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 12, padding: 14 }}>
+              <div style={{ fontSize: 11, color: "#666", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recent client activity</div>
+              {clients.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px 0", color: "#444", fontSize: 13 }}>
+                  No clients yet. Share your link to get started!
+                </div>
+              ) : (
+                clients.slice(0, 5).map((c, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < 4 ? "0.5px solid #1a1a1a" : "none" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1a3a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#22c55e", flexShrink: 0 }}>
+                      {initials(c.client_name)}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>{c.client_name || "Anonymous"}</div>
+                      <div style={{ fontSize: 11, color: "#666" }}>{c.query_summary || "GST query"} · {timeAgo(c.created_at)}</div>
+                    </div>
+                    <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 20, background: "#0d2a0d", color: "#22c55e", fontWeight: 500 }}>Active</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
 
-            <button
-              onClick={() => setTab('subscription')}
-              className="w-full bg-green-500 hover:bg-green-400 text-black font-semibold py-3 rounded-2xl transition-all flex items-center justify-center gap-2"
-            >
-              Upgrade to Unlimited
-              <ArrowRight className="w-4 h-4" />
+        {/* CLIENTS TAB */}
+        {activeTab === "clients" && (
+          <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 11, color: "#666", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>All clients</div>
+            {clients.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#444", fontSize: 13 }}>
+                No clients yet.<br />
+                <span style={{ color: "#22c55e", cursor: "pointer" }} onClick={() => setActiveTab("share")}>Share your link →</span>
+              </div>
+            ) : (
+              clients.map((c, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0", borderBottom: i < clients.length - 1 ? "0.5px solid #1a1a1a" : "none" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1a3a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: "#22c55e", flexShrink: 0 }}>
+                    {initials(c.client_name)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>{c.client_name || "Anonymous"}</div>
+                    <div style={{ fontSize: 11, color: "#666" }}>{c.client_phone || "No phone"}</div>
+                    <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{c.query_summary}</div>
+                  </div>
+                  <div style={{ fontSize: 10, color: "#555" }}>{timeAgo(c.created_at)}</div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* SHARE TOOL TAB */}
+        {activeTab === "share" && (
+          <>
+            <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 12, padding: 16, marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 4 }}>Your unique client link</div>
+              <div style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>Share this with any client. They open it and chat directly — no login needed.</div>
+              <div style={{ background: "#050505", border: "0.5px solid #333", borderRadius: 8, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <span style={{ fontSize: 12, color: "#22c55e", fontFamily: "monospace" }}>{shareLink}</span>
+                <button onClick={copyLink} style={{ fontSize: 11, background: "#22c55e", color: "#000", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 600 }}>
+                  {copied ? "✓ Copied!" : "Copy"}
+                </button>
+              </div>
+              <button onClick={sendWhatsApp} style={{ width: "100%", background: "#22c55e", color: "#000", border: "none", borderRadius: 8, padding: "12px", fontSize: 13, fontWeight: 600, cursor: "pointer", marginBottom: 8 }}>
+                📤 Send on WhatsApp
+              </button>
+            </div>
+
+            <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 12, padding: 16, marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 4 }}>QR Code</div>
+              <div style={{ fontSize: 12, color: "#666", marginBottom: 14 }}>Print this and paste it in your office. Clients scan → land on your GST assistant instantly.</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareLink)}&color=22c55e&bgcolor=050505`}
+                  alt="QR Code"
+                  style={{ width: 160, height: 160, borderRadius: 10, border: "2px solid #22c55e" }}
+                />
+              </div>
+              <button onClick={downloadQR} style={{ width: "100%", background: "transparent", color: "#22c55e", border: "1px solid #22c55e", borderRadius: 8, padding: "11px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                ⬇ Download QR Code
+              </button>
+            </div>
+
+            <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 12 }}>How to use</div>
+              {[
+                ["1", "Copy your link or download QR code"],
+                ["2", "Send link on WhatsApp to your clients"],
+                ["3", "Print QR code, keep it in your office"],
+                ["4", "Client opens link → chats in Gujarati/Hindi/English"],
+                ["5", "You see all their questions in Clients tab"],
+              ].map(([num, text]) => (
+                <div key={num} style={{ display: "flex", gap: 12, marginBottom: 12, alignItems: "flex-start" }}>
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#1a3a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#22c55e", flexShrink: 0 }}>{num}</div>
+                  <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.5, paddingTop: 3 }}>{text}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* AI CHAT TAB - kept for CA's own use */}
+        {activeTab === "plan" && (
+          <div style={{ background: "#111", border: "0.5px solid #222", borderRadius: 12, padding: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 16 }}>Your subscription</div>
+            {[
+              ["Plan", "Free Trial"],
+              ["Client limit", "Up to 5 clients"],
+              ["AI queries/day", "50"],
+              ["Trial ends", "May 24, 2026"],
+              ["Status", "✅ Active"],
+            ].map(([label, val]) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "0.5px solid #1a1a1a" }}>
+                <span style={{ fontSize: 12, color: "#666" }}>{label}</span>
+                <span style={{ fontSize: 12, color: "#fff", fontWeight: 500 }}>{val}</span>
+              </div>
+            ))}
+            <button style={{ width: "100%", background: "transparent", color: "#22c55e", border: "1px solid #22c55e", borderRadius: 8, padding: "12px", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 16 }}>
+              Upgrade to Pro — ₹999/month
             </button>
+            <div style={{ fontSize: 11, color: "#444", textAlign: "center", marginTop: 8 }}>Unlimited clients · Priority support · CA branding</div>
           </div>
-        </div>
-      </aside>
+        )}
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="border-b border-zinc-800 bg-black/30 backdrop-blur-xl">
-          <div className="px-6 py-5 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
-              <p className="text-sm text-gray-400 mt-1">Manage taxes smarter with TaxSathi AI</p>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-white">
-                  {profile?.name || user?.email}
-                </p>
-
-                <p className="text-sm text-gray-400 mt-1">
-                  {planFree ? 'Free' : profile?.plan} plan —
-                  <span className="text-green-400 font-medium ml-1">
-                    {totalFreeAvailable}/10 questions remaining
-                  </span>
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  logout();
-                  navigate('/');
-                }}
-                className="p-3 rounded-2xl border border-zinc-800 hover:border-red-500/40 hover:bg-red-500/10 transition-all"
-              >
-                <LogOut className="w-5 h-5 text-gray-400 hover:text-red-400" />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="lg:hidden border-b border-zinc-800 bg-black px-3 py-3 flex gap-2 overflow-x-auto">
-          {(Array.isArray(tabs) ? tabs : []).map((item) => {
-            const Icon = item.icon;
-            const active = tab === item.id;
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                className={`flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-sm transition-all ${
-                  active
-                    ? 'bg-green-500 text-black'
-                    : 'bg-zinc-900 text-gray-300'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {tab === 'chat' && (
-            <div className="h-full">
-              <GSTAssistant />
-            </div>
-          )}
-
-          {tab === 'history' && (
-            <div className="p-6 max-w-5xl">
-              <h2 className="text-3xl font-bold mb-2">Chat History</h2>
-              <p className="text-gray-400 mb-8">Your previous TaxSathi AI conversations.</p>
-
-              <div className="space-y-4">
-                {(Array.isArray(history) ? history : []).length === 0 && (
-                  <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8 text-center text-gray-400">
-                    No conversations yet.
-                  </div>
-                )}
-
-                {(Array.isArray(history) ? history : []).map((item, index) => (
-                  <div
-                    key={index}
-                    className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5 hover:border-green-500/30 transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold text-lg text-white">
-                          {item.title || 'GST Discussion'}
-                        </h3>
-                        <p className="text-gray-400 text-sm mt-2 line-clamp-2">
-                          {item.last_message || 'Conversation with TaxSathi AI'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {tab === 'subscription' && (
-            <div className="p-6 max-w-5xl">
-              <h2 className="text-3xl font-bold mb-2">Subscription</h2>
-              <p className="text-gray-400 mb-8">Upgrade your TaxSathi AI experience.</p>
-
-              <div className="grid lg:grid-cols-3 gap-6">
-                {(Array.isArray(Object.entries(PLANS)) ? Object.entries(PLANS) : []).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 hover:border-green-500/30 transition-all"
-                  >
-                    <h3 className="text-2xl font-bold mb-2">{value.name}</h3>
-                    <p className="text-4xl font-bold mb-4">₹{value.price}</p>
-
-                    <div className="space-y-3 mb-8 text-sm text-gray-300">
-                      <p>• Unlimited AI Questions</p>
-                      <p>• GST Filing Guidance</p>
-                      <p>• Faster AI Responses</p>
-                      <p>• Premium Support</p>
-                    </div>
-
-                    <button
-                      disabled={subscribeLoading}
-                      onClick={() => handleSubscribe(key)}
-                      className="w-full bg-green-500 hover:bg-green-400 text-black font-semibold py-3 rounded-2xl transition-all disabled:opacity-50"
-                    >
-                      {subscribeLoading ? 'Processing...' : 'Upgrade to Unlimited'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {tab === 'referral' && (
-            <div className="p-6 max-w-4xl">
-              <h2 className="text-3xl font-bold mb-2">Refer & Earn</h2>
-              <p className="text-gray-400 mb-8">Invite friends and earn rewards.</p>
-
-              <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
-                <div className="w-16 h-16 rounded-2xl bg-green-500 flex items-center justify-center mb-6">
-                  <Gift className="w-8 h-8 text-black" />
-                </div>
-
-                <h3 className="text-2xl font-bold mb-3">Share TaxSathi AI</h3>
-
-                <p className="text-gray-400 leading-relaxed mb-6 max-w-2xl">
-                  Invite your friends to TaxSathi AI. When they join, both of you can unlock bonus questions and premium rewards.
-                </p>
-
-                <div className="flex flex-col md:flex-row gap-3">
-                  <input
-                    readOnly
-                    value={referralStats?.referral_link || 'https://taxsathi.ai/referral'}
-                    className="flex-1 bg-black border border-zinc-800 rounded-2xl px-4 py-3 text-gray-300 focus:outline-none focus:border-green-500"
-                  />
-
-                  <button
-                    onClick={copyReferral}
-                    className="bg-green-500 hover:bg-green-400 text-black font-semibold px-6 py-3 rounded-2xl transition-all"
-                  >
-                    Copy Link
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
