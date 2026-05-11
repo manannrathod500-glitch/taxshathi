@@ -81,7 +81,7 @@ const TABS = [
  
 // ── Main Component ───────────────────────────────────────────────────────────
 export default function Dashboard() {
- const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
  
   const [isDark, setIsDark] = useState(true);
@@ -188,7 +188,7 @@ export default function Dashboard() {
     title:     { fontSize: 18, fontWeight: 700, color: D.text, marginBottom: 16 },
     btnPurple: { background: D.accent, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
     btnOutline:{ background: D.card, border: `1px solid ${D.border}`, color: D.muted, borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-    btnWA:     { background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 },
+    btnWA:     { background: "#25D366", color: "#fff", border: "none", borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 },
     btnQR:     { background: D.card2, color: D.muted, border: `1px solid ${D.border}`, borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 },
     sItem:     { background: D.card, border: `1px solid ${D.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 8, transition: "border-color 0.15s" },
     sIcon:     { width: 36, height: 36, borderRadius: 9, background: D.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
@@ -283,7 +283,7 @@ export default function Dashboard() {
         save: "Yes, Logout",
         saveColor: "#ef4444",
         onSave: async () => {
-          await signOut();
+          supabase.auth.signOut().then(() => { window.location.href = "/login"; });
           navigate("/login");
         },
       },
