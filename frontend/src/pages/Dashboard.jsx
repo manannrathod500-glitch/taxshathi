@@ -143,7 +143,7 @@ export default function Dashboard() {
     hint:        isDark ? "#5a5a7a"                    : "#7a6fa0",
     accent:      isDark ? "#8b5cf6"                    : "#7c3aed",
     accentGlow:  isDark ? "rgba(139,92,246,0.15)"      : "rgba(124,58,237,0.1)",
-    green:       isDark ? "#22c55e"                    : "#16a34a",
+    green:       isDark ? "#8b5cf6"                    : "#7c3aed",
     // Sidebar tabs — this is the critical fix
     tabText:     isDark ? "#9090b0"                    : "#3d2d70",   // dark purple in light mode
     tabActive:   isDark ? "rgba(139,92,246,0.18)"      : "rgba(124,58,237,0.12)",
@@ -186,7 +186,7 @@ export default function Dashboard() {
     title:    { fontSize: 18, fontWeight: 700, color: D.text, marginBottom: 16 },
     btnPurple:{ background: D.accent, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
     btnOutline:{ background: D.card, border: `1px solid ${D.border}`, color: D.muted, borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-    btnGreen: { background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 },
+    btnGreen: { background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 },
     btnQR:    { background: D.card2, color: D.muted, border: `1px solid ${D.border}`, borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 },
     sItem:    { background: D.card, border: `1px solid ${D.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 8, transition: "border-color 0.15s" },
     sIcon:    { width: 36, height: 36, borderRadius: 9, background: D.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
