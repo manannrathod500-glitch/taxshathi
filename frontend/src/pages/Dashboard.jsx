@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import GSTAssistant from "./GSTAssistant";
 
