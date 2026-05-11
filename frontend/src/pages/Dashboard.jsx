@@ -38,7 +38,7 @@ const QRCanvas = ({ url, isDark }) => {
   return <canvas ref={canvasRef} style={{ borderRadius: 10, cursor: "pointer" }} onClick={download} title="Click to download" />;
 };
  
-// ── Icons matching image 2 exactly ──────────────────────────────────────────
+// ── Icons ──────────────────────────────────────────────────────────────────
 const Icons = {
   overview: (color) => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -84,7 +84,6 @@ export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
  
-  // Detect device preference on mount
   const [isDark, setIsDark] = useState(true);
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -97,13 +96,12 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [showPlan, setShowPlan] = useState(false);
-  const [modal, setModal] = useState(null); // null | 'profile' | 'email' | 'password' | 'logout'
+  const [modal, setModal] = useState(null);
   const [copied, setCopied] = useState(false);
   const [profile, setProfile] = useState({ full_name: "", ca_slug: "" });
   const [stats, setStats] = useState({ clients: 0, queries: 0 });
   const [activity, setActivity] = useState([]);
  
-  // ── Supabase data fetch ──────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     supabase
@@ -128,35 +126,39 @@ export default function Dashboard() {
   const slugBase = profile.ca_slug || user?.email?.split("@")[0] || "your-link";
   const caLink = `taxsathi.online/ca/${slugBase}`;
   const caFullUrl = `https://${caLink}`;
- 
   const hoursStr = stats.queries > 0 ? `${(stats.queries * 0.25).toFixed(1)}h` : "0h";
  
   // ── Theme tokens ────────────────────────────────────────────────────────
   const D = {
-    bg:          isDark ? "#0a0a0f"                    : "#f5f4ff",
-    sidebar:     isDark ? "#0f0f1a"                    : "#ede9ff",
-    card:        isDark ? "#14141f"                    : "#ffffff",
-    card2:       isDark ? "#1a1a28"                    : "#f0eeff",
-    border:      isDark ? "rgba(139,92,246,0.15)"      : "rgba(109,40,217,0.18)",
-    text:        isDark ? "#f0f0ff"                    : "#1a1030",
-    muted:       isDark ? "#9090b0"                    : "#4a3f70",
-    hint:        isDark ? "#5a5a7a"                    : "#7a6fa0",
-    accent:      isDark ? "#8b5cf6"                    : "#7c3aed",
-    accentGlow:  isDark ? "rgba(139,92,246,0.15)"      : "rgba(124,58,237,0.1)",
-    green:       isDark ? "#8b5cf6"                    : "#7c3aed",
-    // Sidebar tabs — this is the critical fix
-    tabText:     isDark ? "#9090b0"                    : "#3d2d70",   // dark purple in light mode
-    tabActive:   isDark ? "rgba(139,92,246,0.18)"      : "rgba(124,58,237,0.12)",
-    tabActiveText: isDark ? "#f0f0ff"                  : "#1a1030",
-    tabActiveBorder: isDark ? "#8b5cf6"                : "#7c3aed",
-    hamburger:   isDark ? "#f0f0ff"                    : "#1a1030",   // white dark / black light
+    bg:             isDark ? "#0a0a0f"                   : "#f5f4ff",
+    sidebar:        isDark ? "#0f0f1a"                   : "#ede9ff",
+    card:           isDark ? "#14141f"                   : "#ffffff",
+    card2:          isDark ? "#1a1a28"                   : "#f0eeff",
+    border:         isDark ? "rgba(139,92,246,0.15)"     : "rgba(109,40,217,0.18)",
+    text:           isDark ? "#f0f0ff"                   : "#1a1030",
+    muted:          isDark ? "#9090b0"                   : "#4a3f70",
+    hint:           isDark ? "#5a5a7a"                   : "#7a6fa0",
+    accent:         isDark ? "#8b5cf6"                   : "#7c3aed",
+    accentGlow:     isDark ? "rgba(139,92,246,0.15)"     : "rgba(124,58,237,0.1)",
+    tabText:        isDark ? "#9090b0"                   : "#3d2d70",
+    tabActive:      isDark ? "rgba(139,92,246,0.18)"     : "rgba(124,58,237,0.12)",
+    tabActiveText:  isDark ? "#f0f0ff"                   : "#1a1030",
+    tabActiveBorder:isDark ? "#8b5cf6"                   : "#7c3aed",
+    hamburger:      isDark ? "#f0f0ff"                   : "#1a1030",
   };
  
-  // ── Helpers ─────────────────────────────────────────────────────────────
   const copyLink = () => {
     navigator.clipboard?.writeText(caFullUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
+  };
+ 
+  // ── WhatsApp share — WORKING ─────────────────────────────────────────────
+  const shareOnWhatsApp = () => {
+    const msg = encodeURIComponent(
+      `Namaste! 🙏\n\nHu tamne TaxSathi AI share kari rayo chhu — ek free GST & ITR assistant jo Gujarati, Hindi ane English ma 24/7 jawab aape.\n\nTamara sawalo mate click karo:\n${caFullUrl}`
+    );
+    window.open(`https://wa.me/?text=${msg}`, "_blank");
   };
  
   const goTab = (id) => {
@@ -173,29 +175,29 @@ export default function Dashboard() {
  
   // ── Styles ───────────────────────────────────────────────────────────────
   const css = {
-    shell:    { display: "flex", height: "100vh", background: D.bg, color: D.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", overflow: "hidden", transition: "background 0.3s,color 0.3s" },
-    sidebar:  { width: sidebarOpen ? 220 : 0, minWidth: sidebarOpen ? 220 : 0, background: D.sidebar, borderRight: sidebarOpen ? `1px solid ${D.border}` : "none", display: "flex", flexDirection: "column", transition: "width 0.25s,min-width 0.25s,background 0.3s", overflow: "hidden", flexShrink: 0 },
-    sTop:     { padding: "18px 16px 12px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${D.border}` },
-    navTabs:  { flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 3 },
-    main:     { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
-    topbar:   { padding: "13px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${D.border}`, background: D.sidebar, flexShrink: 0 },
-    content:  { flex: 1, overflowY: "auto", padding: 24 },
-    card:     { background: D.card, border: `1px solid ${D.border}`, borderRadius: 12, padding: 16 },
-    card2:    { background: D.card2, border: `1px solid ${D.border}`, borderRadius: 8, padding: "10px 12px" },
-    label:    { fontSize: 11, fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase", color: D.hint, marginBottom: 8 },
-    title:    { fontSize: 18, fontWeight: 700, color: D.text, marginBottom: 16 },
-    btnPurple:{ background: D.accent, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+    shell:     { display: "flex", height: "100vh", background: D.bg, color: D.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", overflow: "hidden", transition: "background 0.3s,color 0.3s" },
+    sidebar:   { width: sidebarOpen ? 220 : 0, minWidth: sidebarOpen ? 220 : 0, background: D.sidebar, borderRight: sidebarOpen ? `1px solid ${D.border}` : "none", display: "flex", flexDirection: "column", transition: "width 0.25s,min-width 0.25s,background 0.3s", overflow: "hidden", flexShrink: 0 },
+    sTop:      { padding: "18px 16px 12px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${D.border}` },
+    navTabs:   { flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 3 },
+    main:      { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" },
+    topbar:    { padding: "13px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${D.border}`, background: D.sidebar, flexShrink: 0 },
+    content:   { flex: 1, overflowY: "auto", padding: 24 },
+    card:      { background: D.card, border: `1px solid ${D.border}`, borderRadius: 12, padding: 16 },
+    card2:     { background: D.card2, border: `1px solid ${D.border}`, borderRadius: 8, padding: "10px 12px" },
+    label:     { fontSize: 11, fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase", color: D.hint, marginBottom: 8 },
+    title:     { fontSize: 18, fontWeight: 700, color: D.text, marginBottom: 16 },
+    btnPurple: { background: D.accent, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
     btnOutline:{ background: D.card, border: `1px solid ${D.border}`, color: D.muted, borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-    btnGreen: { background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 },
-    btnQR:    { background: D.card2, color: D.muted, border: `1px solid ${D.border}`, borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 },
-    sItem:    { background: D.card, border: `1px solid ${D.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 8, transition: "border-color 0.15s" },
-    sIcon:    { width: 36, height: 36, borderRadius: 9, background: D.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-    planCard: { background: D.card, border: `1px solid ${D.border}`, borderRadius: 14, padding: 18 },
-    planFeat: { background: D.card, border: `2px solid ${D.accent}`, borderRadius: 14, padding: 18 },
-    feature:  { fontSize: 12, color: D.muted, padding: "5px 0", display: "flex", alignItems: "center", gap: 7, borderBottom: `1px solid ${D.border}` },
-    input:    { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${D.border}`, background: D.card2, color: D.text, fontSize: 14, marginBottom: 8, outline: "none", boxSizing: "border-box" },
-    overlay:  { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 },
-    modalBox: { background: D.card, border: `1px solid ${D.border}`, borderRadius: 16, padding: 24, width: 320 },
+    btnWA:     { background: "#25D366", color: "#fff", border: "none", borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 },
+    btnQR:     { background: D.card2, color: D.muted, border: `1px solid ${D.border}`, borderRadius: 8, padding: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 },
+    sItem:     { background: D.card, border: `1px solid ${D.border}`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 8, transition: "border-color 0.15s" },
+    sIcon:     { width: 36, height: 36, borderRadius: 9, background: D.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+    planCard:  { background: D.card, border: `1px solid ${D.border}`, borderRadius: 14, padding: 18 },
+    planFeat:  { background: D.card, border: `2px solid ${D.accent}`, borderRadius: 14, padding: 18 },
+    feature:   { fontSize: 12, color: D.muted, padding: "5px 0", display: "flex", alignItems: "center", gap: 7, borderBottom: `1px solid ${D.border}` },
+    input:     { width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${D.border}`, background: D.card2, color: D.text, fontSize: 14, marginBottom: 8, outline: "none", boxSizing: "border-box" },
+    overlay:   { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 },
+    modalBox:  { background: D.card, border: `1px solid ${D.border}`, borderRadius: 16, padding: 24, width: 320 },
   };
  
   // ── Nav Tab ──────────────────────────────────────────────────────────────
@@ -212,10 +214,9 @@ export default function Dashboard() {
           borderLeft: active ? `3px solid ${D.tabActiveBorder}` : "3px solid transparent",
           borderRadius: 10, cursor: "pointer",
           background: active ? D.tabActive : "transparent",
-          color: active ? D.tabActiveText : D.tabText,   // ← FIXED: always a dark/visible color
+          color: active ? D.tabActiveText : D.tabText,
           fontSize: 14, fontWeight: active ? 600 : 500,
           whiteSpace: "nowrap", border: "none",
-          borderLeft: active ? `3px solid ${D.tabActiveBorder}` : "3px solid transparent",
           width: "100%", textAlign: "left", transition: "all 0.15s",
         }}
       >
@@ -257,9 +258,7 @@ export default function Dashboard() {
         ),
         save: "Update Email",
         onSave: async () => {
-          if (v.email === v.email2) {
-            await supabase.auth.updateUser({ email: v.email });
-          }
+          if (v.email === v.email2) await supabase.auth.updateUser({ email: v.email });
           setModal(null);
         },
       },
@@ -274,9 +273,7 @@ export default function Dashboard() {
         ),
         save: "Update Password",
         onSave: async () => {
-          if (v.new === v.new2) {
-            await supabase.auth.updateUser({ password: v.new });
-          }
+          if (v.new === v.new2) await supabase.auth.updateUser({ password: v.new });
           setModal(null);
         },
       },
@@ -334,18 +331,15 @@ export default function Dashboard() {
     </div>
   );
  
-  // ── Plan Feature Row ─────────────────────────────────────────────────────
   const Feature = ({ text }) => (
-    <div style={{ ...css.feature, ...(text === "hide" ? { display: "none" } : {}) }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={D.green} strokeWidth="2.5">
+    <div style={css.feature}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={D.accent} strokeWidth="2.5">
         <polyline points="20 6 9 17 4 12" />
       </svg>
       {text}
     </div>
   );
  
-  // ════════════════════════════════════════════════════════════════════════
-  // RENDER
   // ════════════════════════════════════════════════════════════════════════
   return (
     <div style={css.shell}>
@@ -358,7 +352,7 @@ export default function Dashboard() {
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
-          <span style={css.logoText = { fontSize: 17, fontWeight: 700, color: D.accent, letterSpacing: -0.3, whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 17, fontWeight: 700, color: D.accent, letterSpacing: -0.3, whiteSpace: "nowrap" }}>
             Tax<span style={{ color: D.text }}>Sathi</span>
           </span>
         </div>
@@ -384,7 +378,6 @@ export default function Dashboard() {
           <span style={{ fontSize: 15, fontWeight: 600, color: D.text, flex: 1 }}>
             {{ overview: "Overview", clients: "Clients", share: "Share Tool", settings: showPlan ? "Plans" : "Settings" }[activeTab]}
           </span>
-          {/* Theme toggle */}
           <button
             onClick={() => setIsDark((d) => !d)}
             style={{ padding: "6px 14px", borderRadius: 20, border: `1px solid ${D.border}`, background: D.card, color: D.muted, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
@@ -407,12 +400,11 @@ export default function Dashboard() {
               </div>
               <div style={{ fontSize: 13, color: D.hint, marginBottom: 20 }}>Your CA practice overview for today</div>
  
-              {/* Stats */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
                 {[
                   { label: "Total Clients", val: stats.clients, color: D.text },
                   { label: "Queries Today", val: stats.queries, color: D.accent },
-                  { label: "Hours Saved", val: hoursStr, color: D.green },
+                  { label: "Hours Saved", val: hoursStr, color: D.accent },
                 ].map((s) => (
                   <div key={s.label} style={css.card}>
                     <div style={css.label}>{s.label}</div>
@@ -421,9 +413,7 @@ export default function Dashboard() {
                 ))}
               </div>
  
-              {/* Link + Activity/Plan */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                {/* Client link card */}
                 <div style={css.card}>
                   <div style={css.label}>🔗 Your Client Link</div>
                   <div style={{ ...css.card2, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -432,7 +422,8 @@ export default function Dashboard() {
                       {copied ? "Copied!" : "Copy"}
                     </button>
                   </div>
-                  <button style={css.btnGreen}>
+                  {/* ── WORKING WhatsApp button ── */}
+                  <button onClick={shareOnWhatsApp} style={css.btnWA}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
                       <path d="M12 0C5.373 0 0 5.373 0 12c0 2.073.528 4.023 1.456 5.727L0 24l6.451-1.436A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.008-1.369l-.359-.214-3.724.829.844-3.638-.234-.373A9.818 9.818 0 0 1 2.182 12 9.818 9.818 0 0 1 12 2.182 9.818 9.818 0 0 1 21.818 12 9.818 9.818 0 0 1 12 21.818z" />
@@ -448,7 +439,6 @@ export default function Dashboard() {
                   </button>
                 </div>
  
-                {/* Activity + Plan */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div style={css.card}>
                     <div style={css.label}>Recent Activity</div>
@@ -459,7 +449,7 @@ export default function Dashboard() {
                     ) : activity.map((a, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 0", borderBottom: i < activity.length - 1 ? `1px solid ${D.border}` : "none" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                          <div style={{ width: 7, height: 7, borderRadius: "50%", background: D.green }} />
+                          <div style={{ width: 7, height: 7, borderRadius: "50%", background: D.accent }} />
                           <span style={{ fontSize: 13, color: D.text }}>{a.client_name || "Client"}</span>
                         </div>
                         <span style={{ fontSize: 12, color: D.hint }}>{timeAgo(a.created_at)}</span>
@@ -531,6 +521,15 @@ export default function Dashboard() {
                   <button onClick={copyLink} style={{ ...css.btnPurple, flex: 1 }}>{copied ? "Copied!" : "Copy Link"}</button>
                   <button onClick={() => document.querySelector("canvas")?.click()} style={{ ...css.btnOutline, flex: 1 }}>Download QR</button>
                 </div>
+                <div style={{ marginTop: 10 }}>
+                  <button onClick={shareOnWhatsApp} style={css.btnWA}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.073.528 4.023 1.456 5.727L0 24l6.451-1.436A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.008-1.369l-.359-.214-3.724.829.844-3.638-.234-.373A9.818 9.818 0 0 1 2.182 12 9.818 9.818 0 0 1 12 2.182 9.818 9.818 0 0 1 21.818 12 9.818 9.818 0 0 1 12 21.818z" />
+                    </svg>
+                    Share on WhatsApp
+                  </button>
+                </div>
               </div>
               <div style={css.card}>
                 <div style={css.label}>How it works</div>
@@ -548,7 +547,6 @@ export default function Dashboard() {
             <div>
               <div style={css.title}>Settings</div>
  
-              {/* Theme toggle card */}
               <div style={{ ...css.card, marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: D.text }}>Dark Mode</div>
@@ -638,7 +636,6 @@ export default function Dashboard() {
         </div>
       </div>
  
-      {/* ── Modal ── */}
       {modal && <ModalContent />}
     </div>
   );
