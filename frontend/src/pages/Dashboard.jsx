@@ -57,7 +57,6 @@ export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
  
-  // detect system preference
   const prefersDark =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -468,13 +467,7 @@ export default function Dashboard() {
           <p style={{ color: D.muted, fontSize: 14, marginBottom: 24 }}>
             Give clients instant access to the AI GST assistant — no login needed for them.
           </p>
-          <div
-            style={{
-              display: "flex",
-              gap: 20,
-              flexWrap: "wrap",
-            }}
-          >
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {/* Link card */}
             <div
               style={{
@@ -820,34 +813,41 @@ export default function Dashboard() {
           transition: "width 0.25s ease, min-width 0.25s ease",
         }}
       >
-        {/* Logo */}
+        {/* ── LOGO AREA ── */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 10,
-            padding: "18px 16px 14px",
+            padding: "14px 12px",
             borderBottom: `1px solid ${D.border}`,
             whiteSpace: "nowrap",
             overflow: "hidden",
+            minHeight: 64,
           }}
         >
+          {/*
+            og-image.png is the full horizontal logo (icon + "TAX SATHI AI" text).
+            We show it as the primary logo in the sidebar.
+            The favicon.png is reserved for the browser tab only (set in public/index.html).
+            Sizing: height 36px lets the wide og-image fill the sidebar naturally.
+            object-fit: contain keeps correct proportions with no cropping.
+            The dark background on og-image.png blends with the sidebar in dark mode.
+            In light mode we add a subtle rounded container so it doesn't look floating.
+          */}
           <img
-            src="/favicon.png"
-            alt="TaxSathi"
-            style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
-          />
-          <span
+            src="/og-image.png"
+            alt="TaxSathi AI"
             style={{
-              fontSize: 17,
-              fontWeight: 700,
-              color: D.accent,
-              letterSpacing: -0.3,
-              whiteSpace: "nowrap",
+              height: 36,
+              maxWidth: 188,
+              objectFit: "contain",
+              objectPosition: "left center",
+              borderRadius: isDark ? 0 : 8,
+              background: isDark ? "transparent" : "#1a0a3e",
+              padding: isDark ? 0 : "4px 8px",
+              flexShrink: 0,
             }}
-          >
-            Tax<span style={{ color: D.text }}>Sathi</span>
-          </span>
+          />
         </div>
  
         {/* Nav tabs */}
@@ -920,24 +920,65 @@ export default function Dashboard() {
             padding: "12px 20px",
             borderBottom: `1px solid ${D.border}`,
             background: D.sidebar,
+            minHeight: 64,
           }}
         >
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: D.hamburger,
-              fontSize: 22,
-              lineHeight: 1,
-              padding: 4,
-            }}
-          >
-            ☰
-          </button>
+          {/* Left side: hamburger + logo (shown only when sidebar is collapsed) */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Theme toggle */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: D.hamburger,
+                fontSize: 22,
+                lineHeight: 1,
+                padding: 4,
+                flexShrink: 0,
+              }}
+            >
+              ☰
+            </button>
+ 
+            {/*
+              When sidebar is collapsed the full logo disappears.
+              We show favicon (32px icon) + og-image (text logo) in the topbar
+              so the brand is always visible — same pattern as Notion, Linear, Vercel.
+            */}
+            {!sidebarOpen && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img
+                  src="/favicon.png"
+                  alt="TaxSathi"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 7,
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+                <img
+                  src="/og-image.png"
+                  alt="TaxSathi AI"
+                  style={{
+                    height: 28,
+                    maxWidth: 130,
+                    objectFit: "contain",
+                    objectPosition: "left center",
+                    borderRadius: isDark ? 0 : 6,
+                    background: isDark ? "transparent" : "#1a0a3e",
+                    padding: isDark ? 0 : "3px 7px",
+                    flexShrink: 0,
+                  }}
+                />
+              </div>
+            )}
+          </div>
+ 
+          {/* Right side: theme toggle + avatar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button
               onClick={() => setIsDark(!isDark)}
               style={{
@@ -1073,3 +1114,4 @@ export default function Dashboard() {
     </div>
   );
 }
+ 
