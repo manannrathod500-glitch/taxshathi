@@ -101,8 +101,7 @@ export default function LandingPage() {
  
   const S = {
     page: { background: '#07050f', color: '#e8e0ff', fontFamily: "'DM Sans', sans-serif", overflowX: 'hidden' },
-    nav: { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: 'rgba(7,5,15,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(139,92,246,0.15)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-    navLogo: { color: '#fff', fontSize: 20, fontWeight: 800, textDecoration: 'none', letterSpacing: '-0.5px' },
+    nav: { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: 'rgba(7,5,15,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(139,92,246,0.15)', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
     navBtn: { background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' },
  
     // Hero
@@ -110,7 +109,6 @@ export default function LandingPage() {
     heroBg: { position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,58,237,0.18) 0%, transparent 70%)', pointerEvents: 'none' },
     badge: { display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.08)', borderRadius: 999, padding: '6px 16px', fontSize: 12, color: '#a78bfa', marginBottom: 24 },
     dot: { width: 7, height: 7, background: '#8b5cf6', borderRadius: '50%', animation: 'pulse 2s infinite' },
-    heroLabel: { fontSize: 11, fontWeight: 700, letterSpacing: 4, color: '#6d28d9', textTransform: 'uppercase', marginBottom: 16 },
     h1: { fontSize: 'clamp(2.4rem, 6vw, 4.5rem)', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-1.5px', marginBottom: 20, color: '#fff' },
     gradText: { background: 'linear-gradient(90deg, #a78bfa, #7c3aed, #c4b5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
     heroSub: { color: '#9ca3af', fontSize: 'clamp(0.95rem, 2vw, 1.1rem)', maxWidth: 580, margin: '0 auto 36px', lineHeight: 1.7 },
@@ -166,7 +164,6 @@ export default function LandingPage() {
  
     // Footer
     footer: { borderTop: '1px solid rgba(139,92,246,0.12)', padding: '40px 20px', textAlign: 'center', color: '#4b5563', fontSize: 13 },
-    divider: { height: 1, background: 'rgba(139,92,246,0.1)', margin: '0 20px' },
   };
  
   return (
@@ -179,13 +176,23 @@ export default function LandingPage() {
         input:focus { border-color: rgba(139,92,246,0.5) !important; }
       `}</style>
  
-      {/* NAV */}
+      {/* ── NAV ── */}
       <nav style={S.nav}>
-        <Link to="/" style={S.navLogo}>TaxSathi AI</Link>
+        {/*
+          og-image.png has a dark rounded-rect background that matches the nav perfectly.
+          height: 40px fills the navbar without overflow. No extra background needed.
+        */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <img
+            src="/og-image.png"
+            alt="TaxSathi AI"
+            style={{ height: 40, width: 'auto', objectFit: 'contain' }}
+          />
+        </Link>
         <Link to="/login" style={S.navBtn}>Login</Link>
       </nav>
  
-      {/* HERO */}
+      {/* ── HERO ── */}
       <section style={S.hero}>
         <div style={S.heroBg} />
         <div style={{ position: 'relative', zIndex: 2, maxWidth: 860, width: '100%' }}>
@@ -193,7 +200,20 @@ export default function LandingPage() {
             <span style={S.dot} />
             Trusted by tax professionals & Indian SMBs
           </div>
-          <div style={S.heroLabel}>TAXSATHI AI</div>
+ 
+          {/*
+            Hero logo: large og-image.png centered above the headline.
+            Acts as the brand anchor for the page — like Stripe/Razorpay landing pages.
+            max-width: 320px keeps it readable on mobile too.
+          */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+            <img
+              src="/og-image.png"
+              alt="TaxSathi AI"
+              style={{ height: 72, maxWidth: 320, width: '100%', objectFit: 'contain' }}
+            />
+          </div>
+ 
           <h1 style={S.h1}>
             Get GST/ITR Clients Daily —<br />
             <span style={S.gradText}>Without Cold Calling</span>
@@ -206,6 +226,7 @@ export default function LandingPage() {
               <MessageCircle size={15} /> WhatsApp Us
             </a>
           </div>
+ 
           {/* Stats bar */}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px', marginTop: 56, borderTop: '1px solid rgba(139,92,246,0.12)', paddingTop: 40 }}>
             {[['500+', 'CAs on Waitlist'], ['3 Languages', 'Gujarati · Hindi · English'], ['₹1,999/mo', 'Starting Price'], ['24/7', 'AI Available']].map(([val, label]) => (
@@ -218,7 +239,7 @@ export default function LandingPage() {
         </div>
       </section>
  
-      {/* FEATURES */}
+      {/* ── FEATURES ── */}
       <section style={{ ...S.section, background: 'rgba(139,92,246,0.03)' }}>
         <div style={S.sectionInner}>
           <div style={S.sectionLabel}>What You Get</div>
@@ -236,7 +257,7 @@ export default function LandingPage() {
         </div>
       </section>
  
-      {/* HOW IT WORKS */}
+      {/* ── HOW IT WORKS ── */}
       <section style={S.section}>
         <div style={S.sectionInner}>
           <div style={S.sectionLabel}>How It Works</div>
@@ -259,7 +280,7 @@ export default function LandingPage() {
         </div>
       </section>
  
-      {/* PRICING */}
+      {/* ── PRICING ── */}
       <section style={{ ...S.section, background: 'rgba(139,92,246,0.03)' }}>
         <div style={S.sectionInner}>
           <div style={S.sectionLabel}>Pricing</div>
@@ -291,7 +312,7 @@ export default function LandingPage() {
         </div>
       </section>
  
-      {/* TESTIMONIALS */}
+      {/* ── TESTIMONIALS ── */}
       <section style={S.section}>
         <div style={S.sectionInner}>
           <div style={S.sectionLabel}>What They Say</div>
@@ -310,7 +331,7 @@ export default function LandingPage() {
         </div>
       </section>
  
-      {/* FAQ */}
+      {/* ── FAQ ── */}
       <section style={{ ...S.section, background: 'rgba(139,92,246,0.03)' }}>
         <div style={{ ...S.sectionInner, maxWidth: 720 }}>
           <div style={S.sectionLabel}>FAQ</div>
@@ -328,7 +349,7 @@ export default function LandingPage() {
         </div>
       </section>
  
-      {/* WAITLIST CTA */}
+      {/* ── WAITLIST CTA ── */}
       <section style={S.section}>
         <div style={S.sectionInner}>
           <div style={S.ctaBox}>
@@ -356,10 +377,20 @@ export default function LandingPage() {
         </div>
       </section>
  
-      {/* FOOTER */}
+      {/* ── FOOTER ── */}
       <footer style={S.footer}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: '#a78bfa', marginBottom: 8 }}>TaxSathi AI</div>
+          {/*
+            Footer logo: same og-image.png, smaller at height 36px.
+            Centered, with auto margin. The dark bg of the image blends with footer.
+          */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <img
+              src="/og-image.png"
+              alt="TaxSathi AI"
+              style={{ height: 36, width: 'auto', objectFit: 'contain' }}
+            />
+          </div>
           <div style={{ marginBottom: 16 }}>India's AI-powered GST & ITR assistant for CAs and businesses.</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 32px', marginBottom: 20 }}>
             <Link to="/login" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Login</Link>
