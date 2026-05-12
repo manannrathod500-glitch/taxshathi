@@ -10,6 +10,58 @@ const supabaseUrl = 'https://qjinbmuredxreupqwoqf.supabase.co';
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
  
+// ── Reusable Brand Logo Component ─────────────────────────────────────────────
+// Matches the SidebarLogo in Dashboard.jsx exactly.
+// size: "nav" = navbar (medium), "hero" = large centered, "footer" = small
+const BrandLogo = ({ size = 'nav' }) => {
+  const configs = {
+    nav:    { iconSize: 32, fontSize: 15, subSize: 11, gap: 9 },
+    hero:   { iconSize: 52, fontSize: 24, subSize: 14, gap: 14 },
+    footer: { iconSize: 26, fontSize: 12, subSize: 9,  gap: 7  },
+  };
+  const c = configs[size];
+ 
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: c.gap, flexShrink: 0 }}>
+      <img
+        src="/favicon.png"
+        alt="TaxSathi"
+        style={{
+          width: c.iconSize,
+          height: c.iconSize,
+          borderRadius: Math.round(c.iconSize * 0.22),
+          objectFit: 'cover',
+          flexShrink: 0,
+        }}
+      />
+      <div style={{ lineHeight: 1.15, whiteSpace: 'nowrap' }}>
+        <div
+          style={{
+            color: '#ffffff',
+            fontWeight: 800,
+            fontSize: c.fontSize,
+            letterSpacing: '0.03em',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          TAX SATHI
+        </div>
+        <div
+          style={{
+            color: '#a78bfa',
+            fontWeight: 700,
+            fontSize: c.subSize,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+          }}
+        >
+          AI
+        </div>
+      </div>
+    </div>
+  );
+};
+ 
 export default function LandingPage() {
   const [name, setName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -179,15 +231,11 @@ export default function LandingPage() {
       {/* ── NAV ── */}
       <nav style={S.nav}>
         {/*
-          og-image.png has a dark rounded-rect background that matches the nav perfectly.
-          height: 40px fills the navbar without overflow. No extra background needed.
+          BrandLogo size="nav" → favicon icon (32px) + "TAX SATHI / AI" text.
+          Matches the dashboard sidebar logo exactly. No dark-bg image artifact.
         */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <img
-            src="/og-image.png"
-            alt="TaxSathi AI"
-            style={{ height: 40, width: 'auto', objectFit: 'contain' }}
-          />
+          <BrandLogo size="nav" />
         </Link>
         <Link to="/login" style={S.navBtn}>Login</Link>
       </nav>
@@ -202,16 +250,12 @@ export default function LandingPage() {
           </div>
  
           {/*
-            Hero logo: large og-image.png centered above the headline.
-            Acts as the brand anchor for the page — like Stripe/Razorpay landing pages.
-            max-width: 320px keeps it readable on mobile too.
+            Hero logo: large BrandLogo centered above the headline.
+            size="hero" → 52px icon + big text. Acts as the brand anchor.
+            Consistent with dashboard, no image background bleed issues.
           */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
-            <img
-              src="/og-image.png"
-              alt="TaxSathi AI"
-              style={{ height: 72, maxWidth: 320, width: '100%', objectFit: 'contain' }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+            <BrandLogo size="hero" />
           </div>
  
           <h1 style={S.h1}>
@@ -381,15 +425,11 @@ export default function LandingPage() {
       <footer style={S.footer}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           {/*
-            Footer logo: same og-image.png, smaller at height 36px.
-            Centered, with auto margin. The dark bg of the image blends with footer.
+            Footer logo: BrandLogo size="footer" → small 26px icon + compact text.
+            Consistent with nav and hero. No image rendering issues.
           */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-            <img
-              src="/og-image.png"
-              alt="TaxSathi AI"
-              style={{ height: 36, width: 'auto', objectFit: 'contain' }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <BrandLogo size="footer" />
           </div>
           <div style={{ marginBottom: 16 }}>India's AI-powered GST & ITR assistant for CAs and businesses.</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 32px', marginBottom: 20 }}>
