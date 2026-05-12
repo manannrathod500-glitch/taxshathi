@@ -1,0 +1,42 @@
+# TaxSathi — AI-Powered GST & ITR Assistant for Indian CAs and SMBs
+
+> TaxSathi is a SaaS product that helps Indian Chartered Accountants (CAs) manage client GST and ITR queries 24/7 using AI. CAs get a unique share link and QR code to give clients — clients can ask GST/ITR questions in Gujarati, Hindi, or English without calling the CA directly.
+
+## Product
+
+- Live at: https://taxsathi.online
+- CA Dashboard: https://taxsathi.online/dashboard
+- Login: https://taxsathi.online/login
+
+## What TaxSathi Does
+
+- AI-powered GST & ITR question answering in Gujarati, Hindi, and English
+- CA practice management SaaS for Indian Chartered Accountants
+- Unique public chat link per CA (e.g. taxsathi.online/ca/[slug])
+- Client-facing 24/7 assistant so CAs stop getting repeated calls
+- Automates common queries: GST filing, ITR deadlines, invoice rules, TDS, etc.
+
+## Target Users
+
+- Chartered Accountants (CAs) in India
+- Indian SMBs needing GST/ITR guidance
+- Freelancers and small business owners filing taxes in India
+
+## Pricing Plans
+
+- Free Trial: 7 days, no credit card required
+- Starter: ₹1,999/month
+- Pro: ₹3,999/month
+
+## Tech Stack
+
+- Frontend: React (JSX), deployed on Vercel
+- Backend/Database: Supabase
+- AI: DeepSeek API for GST assistant
+- Languages supported: Gujarati, Hindi, English
+
+## Company
+
+- Product by: Manan Rathod
+- Location: Rajkot, Gujarat, India
+- Contact: taxsathi.online
