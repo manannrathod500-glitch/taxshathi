@@ -53,6 +53,56 @@ const light = {
   hamburger: "#1a0a3e",
 };
  
+// ── Sidebar Logo Component ─────────────────────────────────────────────────────
+// Uses favicon.png (square icon) + wordmark text side by side.
+// This is more reliable than og-image.png which has a dark background
+// that can disappear against the dark sidebar or look odd on light mode.
+const SidebarLogo = ({ isDark, size = "normal" }) => {
+  const D = isDark ? dark : light;
+  const iconSize = size === "small" ? 26 : 32;
+  const fontSize = size === "small" ? 13 : 15;
+ 
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+      <img
+        src="/favicon.png"
+        alt="TaxSathi"
+        style={{
+          width: iconSize,
+          height: iconSize,
+          borderRadius: Math.round(iconSize * 0.22),
+          objectFit: "cover",
+          flexShrink: 0,
+        }}
+      />
+      <div style={{ lineHeight: 1.15, whiteSpace: "nowrap" }}>
+        <div
+          style={{
+            color: D.text,
+            fontWeight: 800,
+            fontSize: fontSize,
+            letterSpacing: "0.03em",
+            fontFamily: "'Segoe UI', sans-serif",
+          }}
+        >
+          TAX SATHI
+        </div>
+        <div
+          style={{
+            color: D.accent,
+            fontWeight: 600,
+            fontSize: Math.round(fontSize * 0.73),
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+          }}
+        >
+          AI
+        </div>
+      </div>
+    </div>
+  );
+};
+ 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -818,7 +868,7 @@ export default function Dashboard() {
           style={{
             display: "flex",
             alignItems: "center",
-            padding: "14px 12px",
+            padding: "14px 16px",
             borderBottom: `1px solid ${D.border}`,
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -826,28 +876,14 @@ export default function Dashboard() {
           }}
         >
           {/*
-            og-image.png is the full horizontal logo (icon + "TAX SATHI AI" text).
-            We show it as the primary logo in the sidebar.
-            The favicon.png is reserved for the browser tab only (set in public/index.html).
-            Sizing: height 36px lets the wide og-image fill the sidebar naturally.
-            object-fit: contain keeps correct proportions with no cropping.
-            The dark background on og-image.png blends with the sidebar in dark mode.
-            In light mode we add a subtle rounded container so it doesn't look floating.
+            SidebarLogo uses favicon.png (square icon) + text wordmark.
+            This works reliably in both dark and light mode because the
+            favicon has a transparent/dark bg that blends naturally,
+            and the text is rendered in theme colors so it's always visible.
+            og-image.png is still used in the landing page hero/navbar
+            where the dark background of the image is intentional and visible.
           */}
-          <img
-            src="/og-image.png"
-            alt="TaxSathi AI"
-            style={{
-              height: 36,
-              maxWidth: 188,
-              objectFit: "contain",
-              objectPosition: "left center",
-              borderRadius: isDark ? 0 : 8,
-              background: isDark ? "transparent" : "#1a0a3e",
-              padding: isDark ? 0 : "4px 8px",
-              flexShrink: 0,
-            }}
-          />
+          <SidebarLogo isDark={isDark} size="normal" />
         </div>
  
         {/* Nav tabs */}
@@ -942,38 +978,12 @@ export default function Dashboard() {
             </button>
  
             {/*
-              When sidebar is collapsed the full logo disappears.
-              We show favicon (32px icon) + og-image (text logo) in the topbar
-              so the brand is always visible — same pattern as Notion, Linear, Vercel.
+              When sidebar is collapsed the SidebarLogo disappears with it.
+              We re-render it here in the topbar so the brand is always visible.
+              Same pattern as Notion, Linear, Vercel.
             */}
             {!sidebarOpen && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <img
-                  src="/favicon.png"
-                  alt="TaxSathi"
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 7,
-                    objectFit: "cover",
-                    flexShrink: 0,
-                  }}
-                />
-                <img
-                  src="/og-image.png"
-                  alt="TaxSathi AI"
-                  style={{
-                    height: 28,
-                    maxWidth: 130,
-                    objectFit: "contain",
-                    objectPosition: "left center",
-                    borderRadius: isDark ? 0 : 6,
-                    background: isDark ? "transparent" : "#1a0a3e",
-                    padding: isDark ? 0 : "3px 7px",
-                    flexShrink: 0,
-                  }}
-                />
-              </div>
+              <SidebarLogo isDark={isDark} size="small" />
             )}
           </div>
  
@@ -1114,4 +1124,3 @@ export default function Dashboard() {
     </div>
   );
 }
- 
