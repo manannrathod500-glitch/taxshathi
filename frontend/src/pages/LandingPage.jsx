@@ -97,6 +97,30 @@ export default function LandingPage() {
       setLoading(false);
     }
   };
+
+  const handleStarterPayment = () => {
+    const options = {
+      key: "rzp_test_XXXXXXXXXXXXXXXX",
+      amount: 149900,
+      currency: "INR",
+      name: "TaxSathi",
+      description: "Starter Plan - Monthly Subscription",
+      image: "/logo192.png",
+      handler: function (response) {
+        alert("Payment successful! Payment ID: " + response.razorpay_payment_id);
+      },
+      prefill: {
+        name: "",
+        email: "",
+        contact: ""
+      },
+      theme: {
+        color: "#8b5cf6"
+      }
+    };
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
  
   const faqs = [
     { q: 'Do freelancers need GST registration in India?', a: 'Yes, if your annual turnover crosses the applicable GST threshold or if you provide interstate services in certain categories.' },
@@ -347,9 +371,13 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link to="/login" style={{ ...S.planBtn(plan.highlight), display: 'block', textAlign: 'center', textDecoration: 'none', lineHeight: '44px', padding: 0 }}>
-                  {plan.cta}
-                </Link>
+                {plan.name === 'Starter' ? (
+                  <button onClick={handleStarterPayment}>Get Started</button>
+                ) : (
+                  <Link to="/login" style={{ ...S.planBtn(plan.highlight), display: 'block', textAlign: 'center', textDecoration: 'none', lineHeight: '44px', padding: 0 }}>
+                    {plan.cta}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
