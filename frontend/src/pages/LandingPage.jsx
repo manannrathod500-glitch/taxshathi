@@ -119,7 +119,7 @@ export default function LandingPage() {
     {
       name: 'Free Trial',
       price: '₹0',
-      period: '14 days',
+      period: '7 days',
       desc: 'Try TaxSathi risk-free',
       features: ['5 client links', '50 AI queries/month', 'Dashboard access', 'WhatsApp sharing'],
       cta: 'Start Free',
@@ -127,7 +127,7 @@ export default function LandingPage() {
     },
     {
       name: 'Starter',
-      price: '₹1,999',
+      price: '₹1,499',
       period: '/month',
       desc: 'For growing CA practices',
       features: ['20 client links', '500 AI queries/month', 'QR code generator', 'Client activity tracking', 'Email support'],
