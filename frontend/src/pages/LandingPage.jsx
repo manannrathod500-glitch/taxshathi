@@ -100,8 +100,8 @@ export default function LandingPage() {
 
   const handleStarterPayment = () => {
     const options = {
-      key: "rzp_test_XXXXXXXXXXXXXXXX",
-      amount: 149900,
+      key: "rzp_test_SrUseD5RRSiER5",
+      amount: 1,499,
       currency: "INR",
       name: "TaxSathi",
       description: "Starter Plan - Monthly Subscription",
