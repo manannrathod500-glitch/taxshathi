@@ -101,7 +101,7 @@ export default function LandingPage() {
   const handleStarterPayment = () => {
     const options = {
       key: process.env.REACT_APP_RAZORPAY_KEY_ID,
-      amount: 1,499,
+      amount: 149900,
       currency: "INR",
       name: "TaxSathi",
       description: "Starter Plan - Monthly Subscription",
