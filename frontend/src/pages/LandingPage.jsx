@@ -100,7 +100,7 @@ export default function LandingPage() {
 
   const handleStarterPayment = () => {
     const options = {
-      key: "rzp_test_SrUseD5RRSiER5",
+      key: process.env.REACT_APP_RAZORPAY_KEY_ID,
       amount: 1,499,
       currency: "INR",
       name: "TaxSathi",
