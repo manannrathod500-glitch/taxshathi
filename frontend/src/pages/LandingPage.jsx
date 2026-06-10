@@ -364,7 +364,7 @@ export default function LandingPage() {
  
           {/* Stats bar */}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px', marginTop: 56, borderTop: '1px solid rgba(139,92,246,0.12)', paddingTop: 40 }}>
-            {[['500+', 'CAs on Waitlist'], ['3 Languages', 'Gujarati · Hindi · English'], ['₹1,999/mo', 'Starting Price'], ['24/7', 'AI Available']].map(([val, label]) => (
+            {[['500+', 'CAs on Waitlist'], ['3 Languages', 'Gujarati · Hindi · English'], ['₹1,499/mo', 'Starting Price'], ['24/7', 'AI Available']].map(([val, label]) => (
               <div key={label} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#a78bfa', letterSpacing: -0.5 }}>{val}</div>
                 <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3 }}>{label}</div>
