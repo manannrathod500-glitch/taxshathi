@@ -1,12 +1,12 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Header
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel
-from typing import Optional, Dict, List, Any
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, Dict, List, Any, Literal
 import uuid
 from datetime import datetime, timezone
 import requests
@@ -68,15 +68,29 @@ app = FastAPI(title="TaxSathi AI API")
 api_router = APIRouter(prefix="/api")
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
+ADMIN_API_KEY = os.environ.get('ADMIN_API_KEY', '')
+
+
+def require_admin(x_admin_key: Optional[str]):
+    """Deny access unless a valid admin key is supplied."""
+    if not ADMIN_API_KEY or not x_admin_key or not hmac.compare_digest(x_admin_key, ADMIN_API_KEY):
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 # ── RAZORPAY ────────────────────────────────────────────────────────────────
 RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '')
 RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)) if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET else None
 
-# Session caches
+# Session caches (bounded to avoid unbounded memory growth from anonymous traffic)
+MAX_SESSIONS = 500
 demo_sessions: Dict[str, LlmChat] = {}
 analyzer_sessions: Dict[str, LlmChat] = {}
+
+
+def _evict_oldest(cache: Dict[str, LlmChat]):
+    while len(cache) >= MAX_SESSIONS:
+        cache.pop(next(iter(cache)))
 
 # ── SYSTEM PROMPTS ──────────────────────────────────────────────────────────
 DEMO_PROMPT = """You are TaxSathi AI — an expert AI assistant for Indian SMB owners, especially Gujarat textile and diamond traders. You have deep knowledge of:
@@ -126,22 +140,22 @@ Be direct, analytical, data-driven. Use Indian SMB market context."""
 
 
 class WaitlistEntry(BaseModel):
-    email: str
-    name: Optional[str] = None
-    business_type: Optional[str] = None
-    city: Optional[str] = None
+    email: EmailStr
+    name: Optional[str] = Field(None, max_length=120)
+    business_type: Optional[str] = Field(None, max_length=120)
+    city: Optional[str] = Field(None, max_length=120)
 
 
 class ChatRequest(BaseModel):
-    message: str
-    session_id: Optional[str] = None
+    message: str = Field(..., min_length=1, max_length=4000)
+    session_id: Optional[str] = Field(None, max_length=64)
 
 
 class AnalyzerRequest(BaseModel):
-    module_name: str
-    description: str
-    target_users: Optional[str] = None
-    session_id: Optional[str] = None
+    module_name: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1, max_length=4000)
+    target_users: Optional[str] = Field(None, max_length=500)
+    session_id: Optional[str] = Field(None, max_length=64)
 
 
 # ── WAITLIST ────────────────────────────────────────────────────────────────
@@ -174,6 +188,7 @@ async def waitlist_count():
 async def demo_chat(data: ChatRequest):
     sid = data.session_id or str(uuid.uuid4())
     if sid not in demo_sessions:
+        _evict_oldest(demo_sessions)
         demo_sessions[sid] = LlmChat(
             api_key=GEMINI_API_KEY,
             session_id=sid,
@@ -188,6 +203,7 @@ async def demo_chat(data: ChatRequest):
 async def analyze_module(data: AnalyzerRequest):
     sid = data.session_id or str(uuid.uuid4())
     if sid not in analyzer_sessions:
+        _evict_oldest(analyzer_sessions)
         analyzer_sessions[sid] = LlmChat(
             api_key=GEMINI_API_KEY,
             session_id=sid,
@@ -247,11 +263,20 @@ async def get_progress():
     return {'modules': modules, 'completion_pct': pct, 'live_count': live, 'total': total, 'next_step': next_step}
 
 
+class ModuleStatusUpdate(BaseModel):
+    status: Literal['live', 'next', 'building', 'planned']
+
+
+VALID_MODULE_IDS = {m['id'] for m in DEFAULT_MODULES}
+
+
 @api_router.patch("/progress/{module_id}")
-async def update_module_status(module_id: str, data: dict):
+async def update_module_status(module_id: str, data: ModuleStatusUpdate):
+    if module_id not in VALID_MODULE_IDS:
+        raise HTTPException(status_code=404, detail="Unknown module")
     await db.module_status.update_one(
         {'module_id': module_id},
-        {'$set': {'status': data.get('status'), 'updated_at': datetime.now(timezone.utc).isoformat()}},
+        {'$set': {'status': data.status, 'updated_at': datetime.now(timezone.utc).isoformat()}},
         upsert=True
     )
     return {'success': True}
@@ -399,6 +424,66 @@ Order message:
     return _gemini_json(prompt, temperature=0.2)
 
 
+# ── TAX ASSISTANT CHAT (DeepSeek, server-side) ──────────────────────────────
+ASSISTANT_SYSTEM_PROMPT = """You are TaxSathi AI — an expert Indian tax assistant. You help Indian CAs, tax professionals, and SMB owners with:
+- GST (Goods and Services Tax) questions
+- ITR (Income Tax Return) filing
+- TDS/TCS rules
+- Indian tax compliance
+- Invoice and billing under GST
+
+You respond in the same language the user writes in — Hindi, Gujarati, or English.
+If asked anything unrelated to Indian tax/finance, politely say: "Main sirf GST, ITR aur Indian tax ke sawaalon mein madad kar sakta hoon."
+Keep answers clear, practical, and concise."""
+
+
+class AssistantMessage(BaseModel):
+    role: Literal['user', 'assistant']
+    content: str = Field(..., max_length=8000)
+
+
+class AssistantChatRequest(BaseModel):
+    messages: List[AssistantMessage] = Field(..., min_length=1, max_length=40)
+
+
+@api_router.post("/chat/assistant")
+async def assistant_chat(data: AssistantChatRequest):
+    if not DEEPSEEK_API_KEY:
+        raise HTTPException(status_code=500, detail="DEEPSEEK_API_KEY not configured on server")
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [
+            {"role": "system", "content": ASSISTANT_SYSTEM_PROMPT},
+            *[{"role": m.role, "content": m.content} for m in data.messages],
+        ],
+        "max_tokens": 1000,
+        "temperature": 0.7,
+    }
+
+    def _call():
+        return requests.post(
+            "https://api.deepseek.com/chat/completions",
+            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+            json=payload,
+            timeout=45,
+        )
+
+    import asyncio
+    loop = asyncio.get_event_loop()
+    try:
+        r = await loop.run_in_executor(None, _call)
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"DeepSeek network error: {e}")
+    if not r.ok:
+        logger.error(f"DeepSeek error {r.status_code}: {r.text[:300]}")
+        raise HTTPException(status_code=502, detail="AI service error")
+    try:
+        reply = r.json()["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, ValueError) as e:
+        raise HTTPException(status_code=502, detail=f"Malformed DeepSeek response: {e}")
+    return {"reply": reply}
+
+
 # ── RAZORPAY PAYMENTS ────────────────────────────────────────────────────────
 
 PLAN_CONFIG = {
@@ -484,40 +569,49 @@ async def verify_razorpay_payment(data: VerifyPaymentRequest):
             {'$set': {'status': 'signature_failed', 'updated_at': datetime.now(timezone.utc).isoformat()}}
         )
         raise HTTPException(status_code=400, detail="Payment verification failed")
-    # Update payment record
+    # Use the plan recorded at order creation — never the client-supplied one,
+    # otherwise a Starter payment could be verified as a Pro activation.
+    order_record = await db.payments.find_one({'order_id': data.razorpay_order_id})
+    if not order_record:
+        raise HTTPException(status_code=404, detail="Order not found")
+    plan_name = order_record['plan']
     await db.payments.update_one(
         {'order_id': data.razorpay_order_id},
         {'$set': {
             'status': 'paid',
             'payment_id': data.razorpay_payment_id,
             'signature': data.razorpay_signature,
-            'plan': data.plan_name,
             'customer_name': data.customer_name,
             'customer_email': data.customer_email,
             'customer_phone': data.customer_phone,
             'paid_at': datetime.now(timezone.utc).isoformat(),
         }}
     )
-    logger.info(f"Payment verified: {data.razorpay_payment_id} for plan {data.plan_name}")
+    logger.info(f"Payment verified: {data.razorpay_payment_id} for plan {plan_name}")
     return {
         'success': True,
-        'message': f'{data.plan_name} plan activated successfully!',
+        'message': f'{plan_name} plan activated successfully!',
         'payment_id': data.razorpay_payment_id,
     }
 
 
 @api_router.get("/payments/history")
-async def payment_history():
+async def payment_history(x_admin_key: Optional[str] = Header(None)):
+    require_admin(x_admin_key)
     payments = await db.payments.find(
-        {'status': 'paid'}, {'_id': 0}
+        {'status': 'paid'}, {'_id': 0, 'signature': 0}
     ).sort('paid_at', -1).to_list(50)
     return payments
 
 
 app.include_router(api_router)
+
+# Credentials must never be combined with a wildcard origin.
+_cors_origins = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
 app.add_middleware(
-    CORSMiddleware, allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials='*' not in _cors_origins,
     allow_methods=["*"], allow_headers=["*"],
 )
 

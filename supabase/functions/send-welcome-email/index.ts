@@ -11,6 +11,22 @@ Deno.serve(async (req: Request) => {
 
     const { name, email } = await req.json();
 
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (typeof email !== 'string' || email.length > 254 || !EMAIL_RE.test(email)) {
+      return new Response(JSON.stringify({ error: 'Invalid email' }), {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
+    // Escape user-supplied name before interpolating into the email HTML
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const safeName = escapeHtml(String(name ?? 'there').slice(0, 120));
+
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
     if (!RESEND_API_KEY) {
@@ -34,7 +50,7 @@ Deno.serve(async (req: Request) => {
           </h1>
 
           <p style="font-size:16px;line-height:1.8;color:#cfcfcf;margin-bottom:20px;">
-            Hi ${name},
+            Hi ${safeName},
           </p>
 
           <p style="font-size:16px;line-height:1.8;color:#cfcfcf;margin-bottom:20px;">

@@ -2,18 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Send, Trash2, Bot, User, Loader2 } from 'lucide-react';
  
-const DEEPSEEK_API_KEY = process.env.REACT_APP_DEEPSEEK_API_KEY;
- 
-const SYSTEM_PROMPT = `You are TaxSathi AI — an expert Indian tax assistant. You help Indian CAs, tax professionals, and SMB owners with:
-- GST (Goods and Services Tax) questions
-- ITR (Income Tax Return) filing
-- TDS/TCS rules
-- Indian tax compliance
-- Invoice and billing under GST
- 
-You respond in the same language the user writes in — Hindi, Gujarati, or English.
-If asked anything unrelated to Indian tax/finance, politely say: "Main sirf GST, ITR aur Indian tax ke sawaalon mein madad kar sakta hoon."
-Keep answers clear, practical, and concise.`;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
  
 const QUICK_QUESTIONS = [
   "GST registration ke liye kya documents chahiye?",
@@ -118,31 +107,20 @@ export default function GSTAssistant() {
         .filter(m => m.role === 'user' || m.role === 'assistant')
         .map(m => ({ role: m.role, content: m.content }));
  
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
+      const response = await fetch(`${API}/chat/assistant`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            ...history
-          ],
-          max_tokens: 1000,
-          temperature: 0.7
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history })
       });
- 
+
       if (!response.ok) {
-        const errData = await response.json();
-        console.error('DeepSeek API error:', errData);
+        const errData = await response.json().catch(() => ({}));
+        console.error('Assistant API error:', errData);
         throw new Error('API error');
       }
- 
+
       const data = await response.json();
-      const reply = data?.choices?.[0]?.message?.content || 'Kuch galat ho gaya. Dobara try karein.';
+      const reply = data?.reply || 'Kuch galat ho gaya. Dobara try karein.';
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err) {
       console.error('sendMessage error:', err);
