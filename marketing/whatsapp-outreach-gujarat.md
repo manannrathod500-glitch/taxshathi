@@ -1,6 +1,6 @@
 # WhatsApp Outreach Kit — Gujarat
 
-Ready-to-send messages. Replace `<YOUR_WA_NUMBER>` with the business WhatsApp number.
+Ready-to-send messages. Business WhatsApp: **7698877447** (wa.me link: https://wa.me/917698877447).
 Link to use everywhere: **https://taxsathi.online**
 
 > WhatsApp rule of thumb: only message people who shared their number with you
@@ -23,7 +23,7 @@ TaxSathi AI — તમારો AI ટેક્સ સાથી:
 
 ફ્રીમાં અજમાવો 👉 https://taxsathi.online
 
-સુરતના ૫૦૦+ વેપારીઓ વેઇટલિસ્ટ પર છે. પ્લાન ₹1,499/મહિનો થી શરૂ.
+ફ્રી પ્લાન ઉપલબ્ધ છે — કાર્ડ વગર. પેઇડ પ્લાન ₹1,499/મહિનો થી શરૂ.
 ```
 
 ## 2. Diamond traders (Gujarati)
@@ -40,7 +40,7 @@ TaxSathi AI:
 
 ફ્રી ડેમો 👉 https://taxsathi.online
 
-કોઈ સવાલ હોય તો આ નંબર પર મેસેજ કરો: <YOUR_WA_NUMBER>
+કોઈ સવાલ હોય તો આ નંબર પર મેસેજ કરો: https://wa.me/917698877447
 ```
 
 ## 3. CAs / tax practitioners (English — Ahmedabad, Rajkot, Vadodara)
