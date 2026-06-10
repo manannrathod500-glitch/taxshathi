@@ -10,6 +10,7 @@ import InvoiceEngine from '@/pages/InvoiceEngine';
 import AuthPage from '@/pages/AuthPage';
 import Dashboard from '@/pages/Dashboard';
 import CAPublicChat from '@/pages/CAPublicChat';
+import { BlogIndex, BlogPost } from '@/pages/BlogPage';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import '@/App.css';
 
@@ -43,6 +44,8 @@ function AppWithReveal() {
       <Route path="/analyzer" element={<ModuleAnalyzer />} />
       <Route path="/progress" element={<ProgressTracker />} />
       <Route path="/ca/:slug" element={<CAPublicChat />} />
+      <Route path="/blog" element={<BlogIndex />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/register" element={<AuthPage mode="register" />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

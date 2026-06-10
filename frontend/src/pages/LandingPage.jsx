@@ -357,14 +357,14 @@ export default function LandingPage() {
           <p style={S.heroSub}>AI-powered lead generation & GST automation for Indian CAs and SMB-focused professionals</p>
           <div style={S.btnRow}>
             <Link to="/login" style={S.btnPrimary}>Start Free Trial <ArrowRight size={15} /></Link>
-            <a href="https://wa.me/919999999999" target="_blank" rel="noreferrer" style={S.btnSecondary}>
+            <a href="https://wa.me/917698877447" target="_blank" rel="noreferrer" style={S.btnSecondary}>
               <MessageCircle size={15} /> WhatsApp Us
             </a>
           </div>
  
           {/* Stats bar */}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px', marginTop: 56, borderTop: '1px solid rgba(139,92,246,0.12)', paddingTop: 40 }}>
-            {[['500+', 'CAs on Waitlist'], ['3 Languages', 'Gujarati · Hindi · English'], ['₹1,499/mo', 'Starting Price'], ['24/7', 'AI Available']].map(([val, label]) => (
+            {[['Free Plan', 'No Card Needed'], ['3 Languages', 'Gujarati · Hindi · English'], ['₹1,499/mo', 'Starting Price'], ['24/7', 'AI Available']].map(([val, label]) => (
               <div key={label} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#a78bfa', letterSpacing: -0.5 }}>{val}</div>
                 <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3 }}>{label}</div>
@@ -531,7 +531,8 @@ export default function LandingPage() {
           <div style={{ marginBottom: 16 }}>India's AI-powered GST & ITR assistant for CAs and businesses.</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 32px', marginBottom: 20 }}>
             <Link to="/login" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Login</Link>
-            <a href="https://wa.me/919999999999" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>WhatsApp</a>
+            <Link to="/blog" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>GST Guides (Blog)</Link>
+            <a href="https://wa.me/917698877447" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>WhatsApp</a>
             <span style={{ color: '#374151', fontSize: 13 }}>contact@taxsathi.online</span>
           </div>
           <div>© {new Date().getFullYear()} TaxSathi AI. All rights reserved.</div>

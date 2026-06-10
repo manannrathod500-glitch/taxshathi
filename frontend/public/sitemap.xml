@@ -9,6 +9,32 @@
     <priority>1.0</priority>
   </url>
 
+  <!-- Blog -->
+  <url>
+    <loc>https://taxsathi.online/blog</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://taxsathi.online/blog/gst-return-due-dates-2026-calendar</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://taxsathi.online/blog/whatsapp-order-to-gst-invoice-surat-textile</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://taxsathi.online/blog/gst-savalo-javabo-gujarati</loc>
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
   <!-- Login / Signup -->
   <url>
     <loc>https://taxsathi.online/login</loc>
