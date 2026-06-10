@@ -161,3 +161,6 @@ credentials.json
 *.pem
 *.key
 .credentials
+
+# FRIDAY personal assistant (separate project, contains personal keys)
+FRIDAY_v3/
