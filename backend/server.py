@@ -10,7 +10,49 @@ from typing import Optional, Dict, List, Any
 import uuid
 from datetime import datetime, timezone
 import requests
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+import razorpay
+import hmac
+import hashlib
+class UserMessage:
+    def __init__(self, text: str):
+        self.text = text
+
+
+class LlmChat:
+    def __init__(self, api_key: str, session_id: str, system_message: str):
+        self.api_key = api_key
+        self.session_id = session_id
+        self.system_message = system_message
+        self.model_name = "gemini-2.5-flash"
+        self.history = []
+
+    def with_model(self, provider: str, name: str):
+        self.model_name = name
+        return self
+
+    async def send_message(self, message: UserMessage) -> str:
+        self.history.append({"role": "user", "parts": [{"text": message.text}]})
+        payload = {
+            "contents": self.history,
+            "systemInstruction": {"parts": [{"text": self.system_message}]}
+        }
+        import asyncio
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
+        
+        def _call():
+            return requests.post(url, json=payload, timeout=45)
+            
+        loop = asyncio.get_event_loop()
+        r = await loop.run_in_executor(None, _call)
+        if not r.ok:
+            raise HTTPException(status_code=502, detail=f"Gemini {r.status_code}: {r.text[:300]}")
+        try:
+            resp_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        except (KeyError, IndexError, ValueError) as e:
+            raise HTTPException(status_code=502, detail=f"Malformed Gemini response: {e}")
+        self.history.append({"role": "model", "parts": [{"text": resp_text}]})
+        return resp_text
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -26,6 +68,11 @@ app = FastAPI(title="TaxSathi AI API")
 api_router = APIRouter(prefix="/api")
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+
+# ── RAZORPAY ────────────────────────────────────────────────────────────────
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '')
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')
+razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)) if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET else None
 
 # Session caches
 demo_sessions: Dict[str, LlmChat] = {}
@@ -350,6 +397,121 @@ Seller state for context: {data.seller_state}
 Order message:
 \"\"\"{data.message}\"\"\""""
     return _gemini_json(prompt, temperature=0.2)
+
+
+# ── RAZORPAY PAYMENTS ────────────────────────────────────────────────────────
+
+PLAN_CONFIG = {
+    'Starter': {'amount': 1499, 'description': 'Starter Plan - Monthly Subscription'},
+    'Pro': {'amount': 3999, 'description': 'Pro Plan - Monthly Subscription'},
+}
+
+
+class CreateOrderRequest(BaseModel):
+    plan_name: str
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    plan_name: str
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+
+
+@api_router.post("/payments/create-order")
+async def create_razorpay_order(data: CreateOrderRequest):
+    if not razorpay_client:
+        raise HTTPException(status_code=500, detail="Razorpay not configured")
+    plan = PLAN_CONFIG.get(data.plan_name)
+    if not plan:
+        raise HTTPException(status_code=400, detail=f"Invalid plan: {data.plan_name}")
+    try:
+        order = razorpay_client.order.create({
+            'amount': plan['amount'] * 100,  # Razorpay expects paise
+            'currency': 'INR',
+            'receipt': f"txs_{data.plan_name.lower()}_{uuid.uuid4().hex[:8]}",
+            'notes': {
+                'plan': data.plan_name,
+                'customer_name': data.customer_name or '',
+                'customer_email': data.customer_email or '',
+            }
+        })
+    except Exception as e:
+        logger.error(f"Razorpay order creation failed: {e}")
+        raise HTTPException(status_code=502, detail="Payment gateway error")
+    # Persist order
+    await db.payments.insert_one({
+        'order_id': order['id'],
+        'plan': data.plan_name,
+        'amount': plan['amount'],
+        'currency': 'INR',
+        'status': 'created',
+        'customer_name': data.customer_name,
+        'customer_email': data.customer_email,
+        'customer_phone': data.customer_phone,
+        'created_at': datetime.now(timezone.utc).isoformat(),
+    })
+    return {
+        'order_id': order['id'],
+        'amount': plan['amount'] * 100,
+        'currency': 'INR',
+        'key_id': RAZORPAY_KEY_ID,
+        'plan_name': data.plan_name,
+        'description': plan['description'],
+    }
+
+
+@api_router.post("/payments/verify")
+async def verify_razorpay_payment(data: VerifyPaymentRequest):
+    if not razorpay_client:
+        raise HTTPException(status_code=500, detail="Razorpay not configured")
+    # Verify signature
+    try:
+        razorpay_client.utility.verify_payment_signature({
+            'razorpay_order_id': data.razorpay_order_id,
+            'razorpay_payment_id': data.razorpay_payment_id,
+            'razorpay_signature': data.razorpay_signature,
+        })
+    except razorpay.errors.SignatureVerificationError:
+        await db.payments.update_one(
+            {'order_id': data.razorpay_order_id},
+            {'$set': {'status': 'signature_failed', 'updated_at': datetime.now(timezone.utc).isoformat()}}
+        )
+        raise HTTPException(status_code=400, detail="Payment verification failed")
+    # Update payment record
+    await db.payments.update_one(
+        {'order_id': data.razorpay_order_id},
+        {'$set': {
+            'status': 'paid',
+            'payment_id': data.razorpay_payment_id,
+            'signature': data.razorpay_signature,
+            'plan': data.plan_name,
+            'customer_name': data.customer_name,
+            'customer_email': data.customer_email,
+            'customer_phone': data.customer_phone,
+            'paid_at': datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+    logger.info(f"Payment verified: {data.razorpay_payment_id} for plan {data.plan_name}")
+    return {
+        'success': True,
+        'message': f'{data.plan_name} plan activated successfully!',
+        'payment_id': data.razorpay_payment_id,
+    }
+
+
+@api_router.get("/payments/history")
+async def payment_history():
+    payments = await db.payments.find(
+        {'status': 'paid'}, {'_id': 0}
+    ).sort('paid_at', -1).to_list(50)
+    return payments
 
 
 app.include_router(api_router)

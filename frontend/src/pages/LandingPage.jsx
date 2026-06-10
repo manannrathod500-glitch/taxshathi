@@ -97,29 +97,94 @@ export default function LandingPage() {
       setLoading(false);
     }
   };
+  const API = process.env.REACT_APP_BACKEND_URL || '';
 
-  const handleStarterPayment = () => {
-    const options = {
-      key: process.env.REACT_APP_RAZORPAY_KEY_ID,
-      amount: 149900,
-      currency: "INR",
-      name: "TaxSathi",
-      description: "Starter Plan - Monthly Subscription",
-      image: "/logo192.png",
-      handler: function (response) {
-        alert("Payment successful! Payment ID: " + response.razorpay_payment_id);
-      },
-      prefill: {
-        name: "",
-        email: "",
-        contact: ""
-      },
-      theme: {
-        color: "#8b5cf6"
+  const handlePayment = async (planName, amountInINR) => {
+    if (!window.Razorpay) {
+      alert("Razorpay SDK failed to load. Please check your internet connection.");
+      return;
+    }
+
+    try {
+      // Step 1: Create order on backend
+      const orderRes = await fetch(`${API}/api/payments/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan_name: planName,
+          customer_name: name || undefined,
+          customer_email: email || undefined,
+          customer_phone: whatsapp || undefined,
+        }),
+      });
+
+      if (!orderRes.ok) {
+        const err = await orderRes.json().catch(() => ({}));
+        alert(err.detail || 'Failed to create payment order. Please try again.');
+        return;
       }
-    };
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+
+      const order = await orderRes.json();
+
+      // Step 2: Open Razorpay Checkout with order_id
+      const options = {
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "TaxSathi AI",
+        description: order.description,
+        image: "/favicon.png",
+        order_id: order.order_id,
+        handler: async function (response) {
+          // Step 3: Verify payment on backend
+          try {
+            const verifyRes = await fetch(`${API}/api/payments/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                plan_name: planName,
+                customer_name: name || undefined,
+                customer_email: email || undefined,
+                customer_phone: whatsapp || undefined,
+              }),
+            });
+            const result = await verifyRes.json();
+            if (verifyRes.ok && result.success) {
+              alert(`🎉 Payment successful!\n\nPlan: ${planName}\nPayment ID: ${response.razorpay_payment_id}\n\nYour ${planName} plan is now active!`);
+            } else {
+              alert("Payment received but verification failed. Please contact support.");
+            }
+          } catch {
+            alert("Payment received. Verification pending — please contact support if not activated within 24 hours.");
+          }
+        },
+        prefill: {
+          name: name || "",
+          email: email || "",
+          contact: whatsapp || "",
+        },
+        theme: {
+          color: "#8b5cf6",
+        },
+        modal: {
+          ondismiss: function () {
+            console.log("Payment modal closed");
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response) {
+        alert(`Payment failed: ${response.error.description}\nPlease try again.`);
+      });
+      rzp.open();
+    } catch (err) {
+      console.error('Payment error:', err);
+      alert('Something went wrong. Please try again.');
+    }
   };
  
   const faqs = [
@@ -157,6 +222,7 @@ export default function LandingPage() {
       features: ['20 client links', '500 AI queries/month', 'QR code generator', 'Client activity tracking', 'Email support'],
       cta: 'Get Started',
       highlight: true,
+      amount: 1499,
     },
     {
       name: 'Pro',
@@ -166,6 +232,7 @@ export default function LandingPage() {
       features: ['Unlimited client links', 'Unlimited AI queries', 'Priority support', 'CA branding on chatbot', 'Advanced analytics', 'WhatsApp onboarding'],
       cta: 'Go Pro',
       highlight: false,
+      amount: 3999,
     },
   ];
  
@@ -371,12 +438,14 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                {plan.name === 'Starter' ? (
-                  <button onClick={handleStarterPayment}>Get Started</button>
-                ) : (
+                {plan.price === '₹0' ? (
                   <Link to="/login" style={{ ...S.planBtn(plan.highlight), display: 'block', textAlign: 'center', textDecoration: 'none', lineHeight: '44px', padding: 0 }}>
                     {plan.cta}
                   </Link>
+                ) : (
+                  <button onClick={() => handlePayment(plan.name, plan.amount)} style={S.planBtn(plan.highlight)}>
+                    {plan.cta}
+                  </button>
                 )}
               </div>
             ))}
