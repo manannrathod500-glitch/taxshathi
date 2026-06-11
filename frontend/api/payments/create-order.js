@@ -6,7 +6,7 @@
 // Requires env vars in Vercel: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET
 // Optional (best-effort order logging): SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
-import crypto from 'crypto';
+const crypto = require('crypto');
 
 const PLAN_CONFIG = {
   Starter: { amount: 1499, description: 'Starter Plan - Monthly Subscription' },
@@ -42,7 +42,7 @@ async function logOrder(row) {
   }
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ detail: 'Method not allowed' });

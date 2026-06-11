@@ -14,7 +14,7 @@ You respond in the same language the user writes in — Hindi, Gujarati, or Engl
 If asked anything unrelated to Indian tax/finance, politely say: "Main sirf GST, ITR aur Indian tax ke sawaalon mein madad kar sakta hoon."
 Keep answers clear, practical, and concise.`;
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ detail: 'Method not allowed' });
