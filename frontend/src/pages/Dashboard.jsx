@@ -194,6 +194,16 @@ export default function Dashboard() {
       ),
     },
     {
+      id: "assistant",
+      label: "AI Assistant",
+      route: "/gst-assistant",
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V9h2v2zm0-4h-2V5h2v2zm4 4h-2V9h2v2zm0-4h-2V5h2v2zM9 11H7V9h2v2zm0-4H7V5h2v2z" />
+        </svg>
+      ),
+    },
+    {
       id: "clients",
       label: "Clients",
       icon: (
@@ -891,7 +901,7 @@ export default function Dashboard() {
           {tabs.map((t) => (
             <div
               key={t.id}
-              onClick={() => setActiveTab(t.id)}
+              onClick={() => (t.route ? navigate(t.route) : setActiveTab(t.id))}
               style={{
                 display: "flex",
                 alignItems: "center",

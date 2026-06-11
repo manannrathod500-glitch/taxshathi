@@ -222,6 +222,15 @@ export default function GSTAssistant() {
         </div>
       )}
  
+      {/* AI limitation disclaimer */}
+      <div
+        className="px-4 pt-2 pb-1 text-[11px] leading-snug text-center"
+        style={{ color: 'rgba(255,255,255,0.4)' }}
+      >
+        ⚠️ TaxSathi AI can make mistakes. This is general information, not professional
+        tax or legal advice — please verify important matters with a qualified CA.
+      </div>
+
       {/* Input */}
       <div className="border-t border-white/10 px-4 py-3 flex gap-2">
         <input
