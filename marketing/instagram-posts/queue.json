@@ -1,0 +1,38 @@
+{
+  "_readme": "Daily Instagram posting queue for @taxsathi_ai. The scheduled agent posts the first item with posted=false (image via raw.githubusercontent URL), then sets posted=true and the date. Captions use literal # — do NOT encode as %23, Instagram shows it verbatim.",
+  "image_base_url": "https://raw.githubusercontent.com/manannrathod500-glitch/taxshathi/main/marketing/instagram-posts/",
+  "ig_user_id": "37222256834028019",
+  "queue": [
+    {
+      "image": "1-gst-late-fee.jpg",
+      "posted": true,
+      "posted_date": "2026-06-11",
+      "caption": "GST return late ho gaya? Yeh lagega charge:\n\n📌 GSTR-3B (normal): ₹50/day\n📌 GSTR-3B (nil return): ₹20/day\n📌 Late tax par interest: 18% p.a.\n\nSabse common galti — GSTR-1 time par file kiya, lekin 3B bhool gaye. 3B ki late fee alag se lagti hai!\n\nKoi bhi GST sawaal? Gujarati, Hindi ya English mein turant poochho — FREE 👉 taxsathi.online\n\n#GST #GSTIndia #GSTReturn #SmallBusiness #TaxTips #BusinessIndia #Vyapari #TaxSathi"
+    },
+    {
+      "image": "2-gst-registration.jpg",
+      "posted": false,
+      "caption": "GST registration zaroori hai ya nahi? 🤔 Simple rule:\n\n🛒 Goods bechte ho → ₹40 lakh+ turnover par\n💼 Services dete ho → ₹20 lakh+ turnover par\n📦 Amazon/Flipkart par bechte ho → Day 1 se, koi threshold nahi!\n\nLate register karoge toh purani sales par bhi tax + penalty lag sakti hai.\n\nApna case check karna hai? Free mein poochho 👉 taxsathi.online\n\n#GSTRegistration #GST #SmallBusiness #StartupIndia #Ecommerce #TaxTips #BusinessIndia #TaxSathi"
+    },
+    {
+      "image": "3-ask-anytime.jpg",
+      "posted": false,
+      "caption": "Raat ke 9 baje GST ka sawaal aaya? CA ka office band hai? 😅\n\nTaxSathi AI se poochho — Gujarati, Hindi ya English mein. Turant jawab, 24/7, bilkul FREE.\n\n✅ GST late fees, due dates, registration\n✅ ITC rules, composition scheme\n✅ Apni bhasha mein, simple jawab\n\nAbhi try karo 👉 taxsathi.online\n\n#GST #TaxHelp #SmallBusiness #AI #GSTIndia #Vyapari #MadeInIndia #TaxSathi"
+    },
+    {
+      "image": "4-due-dates.jpg",
+      "posted": false,
+      "caption": "GST due dates yaad rakhna mushkil? Yeh screenshot save kar lo 📅\n\n🗓️ GSTR-1 (sales detail) → har month ki 11 tarikh\n🗓️ GSTR-3B (tax payment) → har month ki 20 tarikh\n🗓️ CMP-08 (composition) → quarter ke baad 18 tarikh\n\nQRMP scheme mein ho toh dates alag hain — confuse ho toh free mein poochh lo 👉 taxsathi.online\n\n#GST #GSTReturn #DueDates #SmallBusiness #TaxTips #GSTIndia #BusinessIndia #TaxSathi"
+    },
+    {
+      "image": "5-itc-rules.jpg",
+      "posted": false,
+      "caption": "Input Tax Credit = tumhara paisa. Lekin tabhi milega agar:\n\n✅ Supplier ne GSTR-1 file kiya ho (2B mein dikhe)\n✅ Sahi GSTIN ke saath tax invoice ho\n✅ Supplier ko payment 180 din mein kiya ho\n\nSabse bada loss: supplier ne return file nahi kiya, tumhara ITC atka. Har month GSTR-2B se milao!\n\nITC ka koi doubt? Free mein poochho 👉 taxsathi.online\n\n#ITC #InputTaxCredit #GST #SmallBusiness #TaxTips #GSTIndia #Vyapari #TaxSathi"
+    },
+    {
+      "image": "6-composition.jpg",
+      "posted": false,
+      "caption": "Chhote business ke liye GST ka shortcut: Composition Scheme 🚀\n\n💰 Turnover ₹1.5 crore tak → sirf 1% tax (traders/manufacturers)\n🍽️ Restaurant (without alcohol) → 5% tax\n📋 Quarterly return — GSTR-1/3B ka jhanjhat nahi\n\nLekin: ITC nahi milega aur inter-state sale nahi kar sakte.\n\nTumhare liye sahi hai ya nahi? Free mein check karo 👉 taxsathi.online\n\n#CompositionScheme #GST #SmallBusiness #TaxTips #GSTIndia #Vyapari #BusinessIndia #TaxSathi"
+    }
+  ]
+}

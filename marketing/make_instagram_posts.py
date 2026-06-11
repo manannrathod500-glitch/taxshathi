@@ -37,13 +37,12 @@ def font(name, size):
 F_BLACK = "segoeuib.ttf"
 F_SEMI = "seguisb.ttf"
 F_REG = "segoeui.ttf"
-F_INDIC = "Nirmala.ttf"        # Gujarati / Devanagari
-F_INDIC_B = "NirmalaB.ttf"
+F_INDIC = ("Nirmala.ttc", "Nirmala.ttf", "NirmalaB.ttf")  # Gujarati / Devanagari
 
 
 def indic_font(size, bold=False):
     """Nirmala UI renders Gujarati/Hindi; fall back to Segoe if missing."""
-    for name in ([F_INDIC_B, F_INDIC] if bold else [F_INDIC]):
+    for name in F_INDIC:
         try:
             return font(name, size)
         except OSError:
@@ -118,7 +117,7 @@ def post_late_fee():
     y += 26
     d.text((M, y), "GST Return Late?", font=font(F_BLACK, 76), fill=WHITE)
     y += 92
-    d.text((M, y), "Yeh charge lagega 👇", font=font(F_SEMI, 44), fill=ACCENT)
+    d.text((M, y), "Yeh charge lagega:", font=font(F_SEMI, 44), fill=ACCENT)
     y += 84
 
     rows = [
@@ -156,7 +155,7 @@ def post_registration():
     y += 26
     d.text((M, y), "GST Registration", font=font(F_BLACK, 76), fill=WHITE)
     y += 92
-    d.text((M, y), "Zaroori hai ya nahi? 🤔", font=font(F_SEMI, 44), fill=ACCENT)
+    d.text((M, y), "Zaroori hai ya nahi?", font=font(F_SEMI, 44), fill=ACCENT)
     y += 88
 
     rows = [
@@ -215,7 +214,7 @@ def post_product():
     # AI bubble (left)
     lines = [
         ("₹50/day (₹25 + ₹25). Nil return:", WHITE),
-        ("₹20/day. Plus 18% p.a. interest. 📌", WHITE),
+        ("₹20/day. Plus 18% p.a. interest.", WHITE),
         ("Aur kuch poochhna hai? :)", MUTED),
     ]
     af = font(F_SEMI, 32)
@@ -241,9 +240,124 @@ def post_product():
     return img, "3-ask-anytime.png"
 
 
+# ── POST 4: GSTR-1 vs GSTR-3B due dates ──────────────────────────────────────
+def post_due_dates():
+    img = base_canvas()
+    d = ImageDraw.Draw(img)
+    M = 64
+    y = header(img, d, M)
+
+    y += 26
+    d.text((M, y), "GST Due Dates", font=font(F_BLACK, 76), fill=WHITE)
+    y += 92
+    d.text((M, y), "Calendar mein laga lo!", font=font(F_SEMI, 44), fill=ACCENT)
+    y += 84
+
+    rows = [
+        ("GSTR-1 (sales detail)", "11 tarikh", "har month"),
+        ("GSTR-3B (tax payment)", "20 tarikh", "har month"),
+        ("CMP-08 (composition)", "18 tarikh", "har quarter"),
+    ]
+    for title, big, sub in rows:
+        rh = 128
+        d.rounded_rectangle([M, y, SIZE - M, y + rh], radius=20, fill=CARD)
+        d.text((M + 34, y + 24), title, font=font(F_SEMI, 34), fill=MUTED)
+        d.text((M + 34, y + 66), big, font=font(F_BLACK, 44), fill=GREEN)
+        sw = d.textlength(sub, font=font(F_REG, 28))
+        d.text((SIZE - M - 34 - sw, y + 52), sub, font=font(F_REG, 28), fill=MUTED)
+        y += rh + 18
+
+    y += 8
+    tip = "QRMP scheme mein ho toh dates alag hain — confuse ho toh poochh lo, free hai."
+    tip_font = font(F_REG, 30)
+    for line in wrap(d, tip, tip_font, SIZE - 2 * M):
+        d.text((M, y), line, font=tip_font, fill=WHITE)
+        y += 40
+
+    footer(d, M)
+    return img, "4-due-dates.png"
+
+
+# ── POST 5: ITC claim rules ───────────────────────────────────────────────────
+def post_itc():
+    img = base_canvas()
+    d = ImageDraw.Draw(img)
+    M = 64
+    y = header(img, d, M)
+
+    y += 26
+    d.text((M, y), "Input Tax Credit", font=font(F_BLACK, 76), fill=WHITE)
+    y += 92
+    d.text((M, y), "Paisa wapas milta hai — agar...", font=font(F_SEMI, 44), fill=ACCENT)
+    y += 84
+
+    rows = [
+        ("Supplier ne GSTR-1 file kiya ho", "2B mein dikhe", "tabhi claim karo"),
+        ("Tax invoice tumhare paas ho", "GSTIN sahi ho", "apna GSTIN check karo"),
+        ("Payment 180 din mein kiya ho", "warna reversal", "interest ke saath"),
+    ]
+    for title, big, sub in rows:
+        rh = 128
+        d.rounded_rectangle([M, y, SIZE - M, y + rh], radius=20, fill=CARD)
+        d.text((M + 34, y + 24), title, font=font(F_SEMI, 34), fill=MUTED)
+        d.text((M + 34, y + 66), big, font=font(F_BLACK, 44), fill=ACCENT2)
+        sw = d.textlength(sub, font=font(F_REG, 28))
+        d.text((SIZE - M - 34 - sw, y + 52), sub, font=font(F_REG, 28), fill=MUTED)
+        y += rh + 18
+
+    y += 8
+    tip = "Sabse bada loss: supplier ne return file nahi kiya, tumhara ITC atka. Har month 2B se milao."
+    tip_font = font(F_REG, 30)
+    for line in wrap(d, tip, tip_font, SIZE - 2 * M):
+        d.text((M, y), line, font=tip_font, fill=WHITE)
+        y += 40
+
+    footer(d, M)
+    return img, "5-itc-rules.png"
+
+
+# ── POST 6: composition scheme ────────────────────────────────────────────────
+def post_composition():
+    img = base_canvas()
+    d = ImageDraw.Draw(img)
+    M = 64
+    y = header(img, d, M)
+
+    y += 26
+    d.text((M, y), "Composition Scheme", font=font(F_BLACK, 70), fill=WHITE)
+    y += 88
+    d.text((M, y), "Chhote business ka shortcut", font=font(F_SEMI, 44), fill=ACCENT)
+    y += 84
+
+    rows = [
+        ("Turnover ₹1.5 crore tak", "Sirf 1% tax", "traders / manufacturers"),
+        ("Restaurant chalate ho", "5% tax", "without alcohol"),
+        ("Quarterly return (CMP-08)", "Kam paperwork", "GSTR-1/3B nahi"),
+    ]
+    for title, big, sub in rows:
+        rh = 128
+        d.rounded_rectangle([M, y, SIZE - M, y + rh], radius=20, fill=CARD)
+        d.text((M + 34, y + 24), title, font=font(F_SEMI, 34), fill=MUTED)
+        d.text((M + 34, y + 66), big, font=font(F_BLACK, 44), fill=GREEN)
+        sw = d.textlength(sub, font=font(F_REG, 28))
+        d.text((SIZE - M - 34 - sw, y + 52), sub, font=font(F_REG, 28), fill=MUTED)
+        y += rh + 18
+
+    y += 8
+    tip = "Lekin: ITC nahi milega aur dusre state mein nahi bech sakte. Tumhare liye sahi hai ya nahi? Poochho."
+    tip_font = font(F_REG, 30)
+    for line in wrap(d, tip, tip_font, SIZE - 2 * M):
+        d.text((M, y), line, font=tip_font, fill=WHITE)
+        y += 40
+
+    footer(d, M)
+    return img, "6-composition.png"
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
-    for fn in (post_late_fee, post_registration, post_product):
+    for fn in (post_late_fee, post_registration, post_product,
+               post_due_dates, post_itc, post_composition):
         img, name = fn()
         path = os.path.join(OUT_DIR, name)
         img.save(path, "PNG")
