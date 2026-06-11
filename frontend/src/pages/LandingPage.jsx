@@ -90,13 +90,13 @@ const ChatDemo = () => {
   const [typingText, setTypingText] = useState(null); // AI text being typed
   const [showDots, setShowDots] = useState(false);
   const scrollRef = useRef(null);
-  const timeouts = useRef([]);
 
   useEffect(() => {
     let cancelled = false;
+    const pending = [];
     const later = (fn, ms) => {
       const t = setTimeout(() => { if (!cancelled) fn(); }, ms);
-      timeouts.current.push(t);
+      pending.push(t);
     };
 
     const playFrom = (i) => {
@@ -136,7 +136,7 @@ const ChatDemo = () => {
     };
 
     playFrom(0);
-    return () => { cancelled = true; timeouts.current.forEach(clearTimeout); };
+    return () => { cancelled = true; pending.forEach(clearTimeout); };
   }, []);
 
   useEffect(() => {
