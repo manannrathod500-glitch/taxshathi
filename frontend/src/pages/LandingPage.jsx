@@ -75,6 +75,64 @@ const Reveal = ({ children, delay = 0, y = 28, style }) => (
   </motion.div>
 );
 
+// ── Cursor glow: soft light that follows the mouse (desktop only) ─────────────
+const CursorGlow = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !window.matchMedia('(pointer: fine)').matches) return;
+    let raf = null;
+    const move = (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        el.style.transform = `translate(${e.clientX - 320}px, ${e.clientY - 320}px)`;
+        raf = null;
+      });
+    };
+    window.addEventListener('mousemove', move, { passive: true });
+    return () => { window.removeEventListener('mousemove', move); if (raf) cancelAnimationFrame(raf); };
+  }, []);
+  return <div ref={ref} className="ts-cursor-glow" aria-hidden="true" />;
+};
+
+// ── Scroll progress bar: fills left→right as you scroll top→bottom ───────────
+const ScrollProgress = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement;
+      const max = h.scrollHeight - h.clientHeight;
+      const p = max > 0 ? h.scrollTop / max : 0;
+      if (ref.current) ref.current.style.transform = `scaleX(${p})`;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return <div ref={ref} className="ts-progress" aria-hidden="true" />;
+};
+
+// ── 3D tilt-toward-mouse wrapper (used on the hero phone, desktop only) ──────
+const TiltWrap = ({ children }) => {
+  const ref = useRef(null);
+  const onMove = (e) => {
+    const el = ref.current;
+    if (!el || !window.matchMedia('(pointer: fine)').matches) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.transform = `perspective(900px) rotateY(${x * 9}deg) rotateX(${-y * 9}deg)`;
+  };
+  const onLeave = () => {
+    if (ref.current) ref.current.style.transform = 'perspective(900px) rotateY(0deg) rotateX(0deg)';
+  };
+  return (
+    <div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} style={{ transition: 'transform 0.2s ease-out', willChange: 'transform' }}>
+      {children}
+    </div>
+  );
+};
+
 // ── Live AI chat demo (the hero animation — the product in motion) ────────────
 const DEMO_SCRIPT = [
   { role: 'user', text: 'GSTR-3B late fee kitni hai?' },
@@ -493,7 +551,23 @@ export default function LandingPage() {
 
         a.ts-navlink:hover { color: #c4b5fd !important; }
         .ts-btn-glow:hover { filter: brightness(1.12); }
+
+        /* cursor-following glow (desktop pointers only) */
+        .ts-cursor-glow { position: fixed; top: 0; left: 0; width: 640px; height: 640px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(139,92,246,0.13), rgba(124,58,237,0.05) 42%, transparent 68%);
+          pointer-events: none; z-index: 1; will-change: transform; display: none;
+          transform: translate(-1000px, -1000px); }
+        @media (pointer: fine) { .ts-cursor-glow { display: block; } }
+
+        /* scroll progress bar */
+        .ts-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 60;
+          background: linear-gradient(90deg, #7c3aed, #a78bfa, #38bdf8);
+          transform-origin: 0 50%; transform: scaleX(0); will-change: transform;
+          box-shadow: 0 0 12px rgba(139,92,246,0.7); }
       `}</style>
+
+      <ScrollProgress />
+      <CursorGlow />
 
       {/* ── NAV ── */}
       <nav style={S.nav}>
@@ -560,7 +634,9 @@ export default function LandingPage() {
 
           {/* right: live product demo */}
           <motion.div initial={{ opacity: 0, y: 40, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.8, delay: 0.35 }}>
-            <ChatDemo />
+            <TiltWrap>
+              <ChatDemo />
+            </TiltWrap>
             <div style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: '#6b7280' }}>
               ▲ Live demo — this is exactly what your clients see
             </div>
