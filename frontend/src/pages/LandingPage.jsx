@@ -63,17 +63,34 @@ const BrandLogo = ({ size = 'nav' }) => {
 };
 
 // ── Scroll-reveal wrapper ──────────────────────────────────────────────────────
-const Reveal = ({ children, delay = 0, y = 28, style }) => (
-  <motion.div
-    initial={{ opacity: 0, y }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: '-60px' }}
-    transition={{ duration: 0.6, delay, ease: [0.21, 0.6, 0.35, 1] }}
-    style={style}
-  >
-    {children}
-  </motion.div>
-);
+// Content is VISIBLE BY DEFAULT (opacity:1). The fade-up entrance is purely
+// additive — applied via a JS-added `.is-visible` class on scroll, and disabled
+// entirely under prefers-reduced-motion. This guarantees crawlers, prerender
+// snapshots and no-JS visitors always see the content (the old framer-motion
+// whileInView started at opacity:0 and left below-the-fold sections invisible).
+const Reveal = ({ children, delay = 0, y = 28, style }) => {
+  const ref = useRef(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { setShown(true); return; }
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } },
+      { threshold: 0.08, rootMargin: '0px 0px 80px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className={`ts-reveal${shown ? ' is-visible' : ''}`}
+      style={{ '--ts-reveal-y': `${y}px`, animationDelay: shown ? `${delay}s` : undefined, ...style }}
+    >
+      {children}
+    </div>
+  );
+};
 
 // ── Cursor glow: soft light that follows the mouse (desktop only) ─────────────
 const CursorGlow = () => {
@@ -387,6 +404,10 @@ export default function LandingPage() {
   };
 
   const faqs = [
+    { q: 'Why not just use ChatGPT or Google for tax questions?', a: 'General chatbots are trained on worldwide content and often miss India-specific GST and ITR rules, current rates, due dates and late-fee math — and they will not answer reliably in Gujarati. TaxSathi is built only for Indian tax, stays current with CBIC and GST notifications, replies in your language on WhatsApp, and (for CAs) runs under your own brand on a link you share with clients.' },
+    { q: 'Can I put my own CA firm branding on it? (White-label)', a: 'Yes. On the Pro plan every client gets a personal link — taxsathi.online/ca/yourname — and a QR code carrying your firm name, so the assistant looks and feels like your own. You see every question your clients asked from one dashboard.' },
+    { q: 'Do I need a CA to use TaxSathi?', a: 'No. TaxSathi is built so a business owner can get clear GST and ITR answers directly, in their own language, without booking or paying a CA for every small question. For complex matters, we can connect you to an expert.' },
+    { q: "I can't afford a full-time accountant. Is this for me?", a: "Yes — that's exactly who it's for. Instead of paying per question or per return, you get 24/7 answers to your everyday GST, ITR and compliance doubts at a fraction of the cost." },
     { q: 'Do freelancers need GST registration in India?', a: 'Yes, if your annual turnover crosses the applicable GST threshold or if you provide interstate services in certain categories.' },
     { q: 'Can I file ITR without Form 16?', a: 'Yes. You can use salary slips, AIS, bank statements, and Form 26AS to file your return accurately.' },
     { q: 'How can I save tax legally?', a: 'You can use deductions like 80C, 80D, HRA, NPS, and smart salary structuring to reduce tax liability.' },
@@ -436,9 +457,9 @@ export default function LandingPage() {
   ];
 
   const audiences = [
+    { icon: <IndianRupee size={20} />, who: 'Small Business Owners', pain: 'A CA wants ₹1,500+ just to answer one GST doubt — and you have ten every week.', gain: 'Ask unlimited GST & ITR questions in your language, 24/7, with deadline clarity before penalties hit. No appointment, no per-question bill.' },
+    { icon: <Languages size={20} />, who: 'Shopkeepers, Traders & Freelancers', pain: "Tax content is in English. Your business runs in Gujarati — and you can't afford a full-time accountant.", gain: "Ask in ગુજરાતી, get answers in ગુજરાતી. The everyday compliance help you couldn't justify paying a CA for." },
     { icon: <Users size={20} />, who: 'CA Firms & Tax Consultants', pain: 'Same 40 questions, 40 times a month, on WhatsApp.', gain: 'Give every client your AI link — it answers the routine 80% so you handle the 20% that needs real judgment.' },
-    { icon: <IndianRupee size={20} />, who: 'Small Business Owners', pain: '"GST late fee kitni? Kab file karna hai?" — and your CA is busy.', gain: 'Instant answers in your language, 24/7, plus deadline clarity before penalties hit.' },
-    { icon: <Languages size={20} />, who: 'Gujarat Traders & Freelancers', pain: 'Tax content is in English. Your business runs in Gujarati.', gain: 'Ask in ગુજરાતી, get answers in ગુજરાતી. No translation, no confusion.' },
   ];
 
   const marqueeItems = [
@@ -564,6 +585,23 @@ export default function LandingPage() {
           background: linear-gradient(90deg, #7c3aed, #a78bfa, #38bdf8);
           transform-origin: 0 50%; transform: scaleX(0); will-change: transform;
           box-shadow: 0 0 12px rgba(139,92,246,0.7); }
+
+        /* scroll-reveal: visible by default; entrance animation is additive */
+        .ts-reveal { opacity: 1; }
+        @keyframes ts-reveal-in {
+          from { opacity: 0; transform: translateY(var(--ts-reveal-y, 28px)); }
+          to   { opacity: 1; transform: none; }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          .ts-reveal.is-visible { animation: ts-reveal-in 0.6s cubic-bezier(0.21,0.6,0.35,1) both; }
+        }
+
+        /* respect users who ask for less motion: kill ambient + loop animations */
+        @media (prefers-reduced-motion: reduce) {
+          .ts-aurora::before, .ts-aurora::after, .ts-phone, .ts-marquee-track,
+          .ts-pulse, .ts-caret, .ts-dot, .gradText, .ts-cursor-glow { animation: none !important; }
+          * { scroll-behavior: auto !important; }
+        }
       `}</style>
 
       <ScrollProgress />
@@ -606,9 +644,9 @@ export default function LandingPage() {
             </motion.p>
 
             <motion.p style={S.heroSub} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.22 }}>
-              The 24/7 AI tax assistant for Indian CAs and small businesses.
-              Your clients ask on their phone — the AI answers instantly in Gujarati, Hindi or English.
-              You get your evenings back.
+              The 24/7 AI tax assistant for Indian small businesses — and the CAs who serve them.
+              Ask GST, ITR or compliance questions on your phone and get instant answers in Gujarati, Hindi or English.
+              No appointment, no waiting, no big bill.
             </motion.p>
 
             <motion.div style={S.btnRow} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
@@ -617,6 +655,13 @@ export default function LandingPage() {
                 <MessageCircle size={15} /> WhatsApp Us
               </a>
             </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.4 }}
+              style={{ marginTop: 16, fontSize: 12.5, color: '#6b7280', lineHeight: 1.6, maxWidth: 480 }}
+            >
+              Built only for Indian GST &amp; ITR — not a generic chatbot. Answers in ગુજરાતી, हिंदी &amp; English, right on WhatsApp.
+            </motion.p>
 
             {/* trust stats */}
             <motion.div
@@ -638,7 +683,7 @@ export default function LandingPage() {
               <ChatDemo />
             </TiltWrap>
             <div style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: '#6b7280' }}>
-              ▲ Live demo — this is exactly what your clients see
+              ▲ Live demo — this is exactly what you (and your clients) get
             </div>
           </motion.div>
         </div>
@@ -684,8 +729,8 @@ export default function LandingPage() {
         <div style={S.sectionInner}>
           <Reveal>
             <div style={S.sectionLabel}>What You Get</div>
-            <h2 style={S.sectionTitle}>Everything a CA Needs to Scale</h2>
-            <p style={S.sectionDesc}>One platform. AI-powered. Built for Indian tax professionals.</p>
+            <h2 style={S.sectionTitle}>Everything You Need to Stay Compliant</h2>
+            <p style={S.sectionDesc}>One AI platform for Indian businesses — and the CAs who serve them.</p>
           </Reveal>
           <div style={S.featGrid}>
             {features.map((f, i) => (
@@ -706,14 +751,14 @@ export default function LandingPage() {
         <div style={S.sectionInner}>
           <Reveal>
             <div style={S.sectionLabel}>How It Works</div>
-            <h2 style={S.sectionTitle}>3 Steps to Your AI-Powered Practice</h2>
-            <p style={{ ...S.sectionDesc, marginBottom: 52 }}>Set up in under 5 minutes. No tech skills required.</p>
+            <h2 style={S.sectionTitle}>3 Steps to Instant Tax Answers</h2>
+            <p style={{ ...S.sectionDesc, marginBottom: 52 }}>Set up in under 5 minutes. No tech skills, no CA appointment required.</p>
           </Reveal>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
             {[
-              { step: '01', title: 'Sign Up & Get Your Link', desc: 'Create your TaxSathi account and receive a unique CA link — taxsathi.online/ca/yourname' },
-              { step: '02', title: 'Share with Clients', desc: 'Send your link on WhatsApp or print your QR code. Clients tap it and start chatting instantly.' },
-              { step: '03', title: 'Track & Grow', desc: 'See how many clients used it, what they asked, and how much time you saved — all in one dashboard.' },
+              { step: '01', title: 'Sign Up Free', desc: 'Business owners: create your account and ask your first GST or ITR question in seconds. CAs: get a personal link — taxsathi.online/ca/yourname.' },
+              { step: '02', title: 'Ask in Your Language', desc: 'Type any tax doubt in Gujarati, Hindi or English and get an instant, India-aware answer. CAs can share their link on WhatsApp or a QR code so clients self-serve.' },
+              { step: '03', title: 'Stay Ahead of Deadlines', desc: 'Calculate late fees, understand notices, and never miss a due date. CAs also see what clients asked and how much time they saved — all in one dashboard.' },
             ].map((item, i) => (
               <Reveal key={item.step} delay={i * 0.14}>
                 <div className="ts-card" style={{ position: 'relative', overflow: 'hidden', height: '100%', background: 'rgba(255,255,255,0.02)' }}>
@@ -783,7 +828,7 @@ export default function LandingPage() {
           <Reveal>
             <div style={S.sectionLabel}>FAQ</div>
             <h2 style={S.sectionTitle}>Common Tax Questions</h2>
-            <p style={{ ...S.sectionDesc, marginBottom: 44 }}>Answers to questions your clients ask every day.</p>
+            <p style={{ ...S.sectionDesc, marginBottom: 44 }}>Answers to the questions business owners and clients ask every day.</p>
           </Reveal>
           {faqs.map((faq, i) => (
             <Reveal key={i} delay={i * 0.06} y={16}>
@@ -806,19 +851,28 @@ export default function LandingPage() {
             <div style={S.ctaBox}>
               <div className="ts-aurora" style={{ opacity: 0.5 }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={S.sectionLabel}>Get Early Access</div>
+                <div style={S.sectionLabel}>Get Started</div>
                 <h2 style={{ ...S.sectionTitle, marginBottom: 8 }}>Start Free Today</h2>
-                <p style={{ color: '#9ca3af', fontSize: 14, marginBottom: 32 }}>
-                  Be among the first CAs in Gujarat to put AI to work. Free plan — no credit card required.
+                <p style={{ color: '#9ca3af', fontSize: 14, marginBottom: 24 }}>
+                  Create your free account in 2 minutes — or leave your details and we'll set you up
+                  personally on WhatsApp. Free plan, no credit card required.
                 </p>
+                <Link to="/register" style={{ ...S.btnPrimary, marginBottom: 20 }} className="ts-btn-glow">
+                  Create Free Account <ArrowRight size={15} />
+                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 20px', color: '#6b7280', fontSize: 12 }}>
+                  <span style={{ flex: 1, height: 1, background: 'rgba(139,92,246,0.2)' }} />
+                  or let us set it up for you
+                  <span style={{ flex: 1, height: 1, background: 'rgba(139,92,246,0.2)' }} />
+                </div>
                 {submitted ? (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                     style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid #8b5cf6', borderRadius: 14, padding: '28px 20px' }}
                   >
                     <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: '#a78bfa', marginBottom: 6 }}>You're on the list!</div>
-                    <div style={{ fontSize: 13, color: '#9ca3af' }}>We'll contact you on WhatsApp shortly. Check your email too!</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: '#a78bfa', marginBottom: 6 }}>Got it — thank you!</div>
+                    <div style={{ fontSize: 13, color: '#9ca3af' }}>We'll reach out on WhatsApp shortly to get you set up. Check your email too!</div>
                   </motion.div>
                 ) : (
                   <form onSubmit={handleSubmit}>
@@ -827,7 +881,7 @@ export default function LandingPage() {
                     <input style={S.input} type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} required />
                     {errorMessage && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{errorMessage}</div>}
                     <button style={S.submitBtn} type="submit" disabled={loading} className="ts-btn-glow">
-                      {loading ? 'Submitting...' : 'Get Early Access →'}
+                      {loading ? 'Submitting...' : 'Request Free Setup →'}
                     </button>
                   </form>
                 )}
@@ -843,14 +897,22 @@ export default function LandingPage() {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
             <BrandLogo size="footer" />
           </div>
-          <div style={{ marginBottom: 16 }}>India's AI-powered GST & ITR assistant for CAs and businesses.</div>
+          <div style={{ marginBottom: 16 }}>India's AI-powered GST & ITR assistant for small businesses and the CAs who serve them.</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 32px', marginBottom: 20 }}>
             <Link to="/login" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Login</Link>
             <Link to="/blog" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>GST Guides (Blog)</Link>
             <a href="https://wa.me/917698877447" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>WhatsApp</a>
-            <span style={{ color: '#374151', fontSize: 13 }}>contact@taxsathi.online</span>
+            <a href="mailto:contact@taxsathi.online" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>contact@taxsathi.online</a>
           </div>
-          <div>© {new Date().getFullYear()} TaxSathi AI. All rights reserved.</div>
+          <div style={{ maxWidth: 680, margin: '0 auto 14px', fontSize: 12, color: '#52525b', lineHeight: 1.6 }}>
+            <strong style={{ color: '#71717a', fontWeight: 600 }}>Disclaimer:</strong> TaxSathi AI gives general GST &amp; ITR
+            information to help you understand your obligations. It is an AI assistant, not a substitute for professional
+            advice — please confirm important filings and decisions with a qualified Chartered Accountant.
+          </div>
+          <div style={{ maxWidth: 680, margin: '0 auto 20px', fontSize: 12, color: '#52525b', lineHeight: 1.6 }}>
+            🔒 Your data stays private — we never sell your information, and your questions are used only to answer you.
+          </div>
+          <div>© {new Date().getFullYear()} TaxSathi AI · Made in Gujarat, India 🇮🇳 · All rights reserved.</div>
         </div>
       </footer>
     </div>
