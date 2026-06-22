@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { motion } from 'framer-motion';
 import {
-  ArrowRight, Users, Shield, Zap, Check, MessageCircle,
+  ArrowRight, Users, Shield, Zap, Check, X, MessageCircle,
   ChevronDown, Bot, TrendingUp, Globe, Sparkles, IndianRupee, Languages
 } from 'lucide-react';
 
@@ -462,6 +462,23 @@ export default function LandingPage() {
     { icon: <Users size={20} />, who: 'CA Firms & Tax Consultants', pain: 'Same 40 questions, 40 times a month, on WhatsApp.', gain: 'Give every client your AI link — it answers the routine 80% so you handle the 20% that needs real judgment.' },
   ];
 
+  const vsChatGPT = {
+    taxsathi: [
+      'Answers in ગુજરાતી, हिंदी & English — on WhatsApp, no app or login',
+      'Built only for Indian GST & ITR — current rates, real due dates & exact late-fee math',
+      'Understands your business — ask follow-ups without re-explaining',
+      'A real CA backs you up when a matter needs human judgment',
+      'Made for traders & shopkeepers, not prompt experts',
+    ],
+    generic: [
+      'Generic, global answers — often outdated or simply wrong on Indian GST rules',
+      'You need English and the skill to "prompt" it the right way',
+      'No memory of your business, GSTIN or deadlines',
+      'No accountability — "consult a professional" and you\'re on your own',
+      "Won't reliably give your exact late fee or your next due date",
+    ],
+  };
+
   const marqueeItems = [
     'ગુજરાતી · हिंदी · English', 'GST Returns', 'ITR Filing', 'Late-fee Calculator', 'TDS / TCS Rules',
     'Notice Explanations', '24/7 Availability', 'WhatsApp Sharing', 'Client QR Codes', 'Compliance Deadlines',
@@ -721,6 +738,57 @@ export default function LandingPage() {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── WHY NOT CHATGPT ── */}
+      <section style={S.section}>
+        <div style={S.sectionInner}>
+          <Reveal>
+            <div style={S.sectionLabel}>Why TaxSathi</div>
+            <h2 style={S.sectionTitle}>"Why not just use ChatGPT or Google?"</h2>
+            <p style={S.sectionDesc}>
+              Free chatbots are fine for general questions. But for your GST &amp; ITR — in your own
+              language, with real money and real deadlines on the line — they fall short.
+            </p>
+          </Reveal>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+            <Reveal>
+              <div className="ts-card" style={{ height: '100%', border: '1.5px solid rgba(139,92,246,0.45)', background: 'linear-gradient(135deg, rgba(124,58,237,0.18), rgba(139,92,246,0.06))' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                  <div className="ts-icon" style={{ marginBottom: 0 }}><Bot size={22} /></div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>TaxSathi AI</div>
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {vsChatGPT.taxsathi.map((t) => (
+                    <li key={t} style={{ display: 'flex', gap: 10, fontSize: 13.5, color: '#e8e0ff', lineHeight: 1.55 }}>
+                      <Check size={17} style={{ color: '#34d399', flexShrink: 0, marginTop: 1 }} />{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <div className="ts-card" style={{ height: '100%', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                  <div className="ts-icon" style={{ marginBottom: 0, background: 'rgba(255,255,255,0.05)', color: '#9ca3af' }}><Sparkles size={22} /></div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#9ca3af' }}>Free ChatGPT / Google</div>
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {vsChatGPT.generic.map((t) => (
+                    <li key={t} style={{ display: 'flex', gap: 10, fontSize: 13.5, color: '#9ca3af', lineHeight: 1.55 }}>
+                      <X size={17} style={{ color: '#6b7280', flexShrink: 0, marginTop: 1 }} />{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Reveal>
+          </div>
+          <Reveal delay={0.15}>
+            <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 13, marginTop: 28 }}>
+              For anything complex, TaxSathi connects you to a real CA — so you're never guessing with your taxes.
+            </p>
+          </Reveal>
         </div>
       </section>
 
