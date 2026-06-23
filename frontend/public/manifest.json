@@ -1,0 +1,19 @@
+{
+  "short_name": "TaxSathi",
+  "name": "TaxSathi AI — GST & ITR Assistant",
+  "description": "AI-powered GST & ITR assistant for Indian businesses and CAs — in Gujarati, Hindi & English.",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "type": "image/png",
+      "sizes": "1254x1254",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#07050f",
+  "background_color": "#07050f"
+}
