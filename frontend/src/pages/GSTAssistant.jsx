@@ -42,6 +42,8 @@ const CONTENT = {
       'When is the last date to file ITR?',
       'What is the Composition Scheme?',
       'How much is the GSTR-3B late fee?',
+      // Gujarati example so users can see the assistant supports Gujarati too
+      'GST નોંધણી માટે કયા દસ્તાવેજો જોઈએ છે?',
     ],
     talkCA: 'Talk to a CA',
     err: 'Something went wrong. Please try again.',
