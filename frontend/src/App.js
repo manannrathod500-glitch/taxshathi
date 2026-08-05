@@ -12,6 +12,8 @@ import Dashboard from '@/pages/Dashboard';
 import CAPublicChat from '@/pages/CAPublicChat';
 import OwnerHome from '@/pages/OwnerHome';
 import { BlogIndex, BlogPost } from '@/pages/BlogPage';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import TermsOfService from '@/pages/TermsOfService';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import '@/App.css';
 
@@ -48,6 +50,8 @@ function AppWithReveal() {
       <Route path="/home" element={<ProtectedRoute><OwnerHome /></ProtectedRoute>} />
       <Route path="/blog" element={<BlogIndex />} />
       <Route path="/blog/:slug" element={<BlogPost />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-of-service" element={<TermsOfService />} />
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/register" element={<AuthPage mode="register" />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

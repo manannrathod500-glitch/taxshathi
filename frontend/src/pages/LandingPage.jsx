@@ -849,6 +849,8 @@ export default function LandingPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 32px', marginBottom: 20 }}>
             <Link to="/login" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Login</Link>
             <Link to="/blog" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>GST Guides (Blog)</Link>
+            <Link to="/privacy-policy" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Privacy Policy</Link>
+            <Link to="/terms-of-service" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Terms of Service</Link>
             <a href="https://wa.me/917698877447" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>WhatsApp</a>
             <span style={{ color: '#374151', fontSize: 13 }}>contact@taxsathi.online</span>
           </div>
