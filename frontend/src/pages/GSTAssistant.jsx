@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Send, Trash2, Bot, User, Loader2, Mic, Volume2, MessageCircle } from 'lucide-react';
-import { bright as T, SPEECH_LANG, detectLang } from '@/lib/theme';
+import { dark as T, SPEECH_LANG, detectLang } from '@/lib/theme';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const CA_WHATSAPP = 'https://wa.me/917698877447?text=Hi,%20I%20need%20help%20from%20a%20CA%20on%20a%20tax%20matter';
 
-// ── Per-language UI copy (Gujarati-first — that's the brand promise) ──────────
-const LANGS = ['gu', 'hi', 'en'];
-const LANG_LABEL = { gu: 'ગુ', hi: 'हि', en: 'EN' };
+// ── UI copy (Gujarati-first — that's the brand promise). Reply language is not
+// toggled here: the assistant answers in whatever language each message is written in.
 const CONTENT = {
   gu: {
     greeting: 'નમસ્તે! 🙏 હું TaxSathi AI છું. GST, ITR કે કોઈપણ ભારતીય ટેક્સનો સવાલ પૂછો — ગુજરાતી, હિન્દી કે English માં.',
@@ -22,37 +21,11 @@ const CONTENT = {
     talkCA: 'CA સાથે વાત કરો',
     err: 'કંઈક ખોટું થયું. ફરી પ્રયત્ન કરો.',
   },
-  hi: {
-    greeting: 'नमस्ते! 🙏 मैं TaxSathi AI हूँ। GST, ITR या कोई भी भारतीय टैक्स सवाल पूछें — गुजराती, हिंदी या English में।',
-    placeholder: 'सवाल लिखें या 🎤 दबाकर बोलें…',
-    quick: [
-      'GST रजिस्ट्रेशन के लिए कौन से डॉक्युमेंट चाहिए?',
-      'ITR भरने की आख़िरी तारीख़ कब है?',
-      'कम्पोज़िशन स्कीम क्या है?',
-      'GSTR-3B लेट फीस कितनी है?',
-    ],
-    talkCA: 'CA से बात करें',
-    err: 'कुछ ग़लत हो गया. दोबारा कोशिश करें.',
-  },
-  en: {
-    greeting: 'Namaste! 🙏 I am TaxSathi AI. Ask any GST, ITR or Indian tax question — in Gujarati, Hindi or English.',
-    placeholder: 'Type a question or tap 🎤 to speak…',
-    quick: [
-      'Which documents are needed for GST registration?',
-      'When is the last date to file ITR?',
-      'What is the Composition Scheme?',
-      'How much is the GSTR-3B late fee?',
-      // Gujarati example so users can see the assistant supports Gujarati too
-      'GST નોંધણી માટે કયા દસ્તાવેજો જોઈએ છે?',
-    ],
-    talkCA: 'Talk to a CA',
-    err: 'Something went wrong. Please try again.',
-  },
 };
 
 const stripMd = (t) => t.replace(/[*_`>#|]/g, '').replace(/\s+/g, ' ').trim();
 
-// ── Markdown renderer (light theme) ──────────────────────────────────────────
+// ── Markdown renderer ────────────────────────────────────────────────────────
 const formatInline = (text) => {
   const parts = [];
   const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
@@ -97,7 +70,6 @@ const renderMarkdown = (text) => text.split('\n').map((line, i) => {
 }).filter(Boolean);
 
 export default function GSTAssistant() {
-  const [lang, setLang] = useState('gu'); // Gujarati-first
   const [messages, setMessages] = useState([{ role: 'assistant', content: CONTENT.gu.greeting }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -106,17 +78,11 @@ export default function GSTAssistant() {
   const bottomRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  const C = CONTENT[lang];
+  const C = CONTENT.gu;
   const sttSupported = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   const ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-
-  // Reset greeting to the selected language while the chat is still empty
-  useEffect(() => {
-    setMessages((prev) => (prev.length === 1 && prev[0].role === 'assistant'
-      ? [{ role: 'assistant', content: CONTENT[lang].greeting }] : prev));
-  }, [lang]);
 
   const sendMessage = useCallback(async (text) => {
     const userText = (text || input).trim();
@@ -149,7 +115,7 @@ export default function GSTAssistant() {
     if (listening) { recognitionRef.current?.stop(); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
-    rec.lang = SPEECH_LANG[lang];
+    rec.lang = SPEECH_LANG.gu;
     rec.interimResults = false;
     rec.maxAlternatives = 1;
     rec.onresult = (e) => { const t = e.results[0][0].transcript; setInput(t); sendMessage(t); };
@@ -187,7 +153,7 @@ export default function GSTAssistant() {
       {/* ── Header ── */}
       <header style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 10 }}>
         <Link to="/dashboard" style={{ color: T.textMute, display: 'flex' }}><ArrowLeft size={22} /></Link>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(139,92,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Bot size={20} style={{ color: T.primary }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -195,16 +161,6 @@ export default function GSTAssistant() {
           <div style={{ fontSize: 12.5, color: T.send, display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.send, display: 'inline-block' }} /> Online
           </div>
-        </div>
-        {/* language toggle */}
-        <div style={{ display: 'flex', background: T.surfaceAlt, borderRadius: 10, padding: 3, gap: 2 }}>
-          {LANGS.map((l) => (
-            <button key={l} onClick={() => setLang(l)} aria-pressed={lang === l}
-              style={{ ...iconBtn, width: 'auto', height: 30, padding: '0 12px', borderRadius: 8, fontWeight: 700, fontSize: 14, fontFamily: T.fontGu,
-                background: lang === l ? T.primary : 'transparent', color: lang === l ? '#fff' : T.textSub }}>
-              {LANG_LABEL[l]}
-            </button>
-          ))}
         </div>
         <button onClick={resetChat} title="Clear chat" style={{ ...iconBtn, background: 'transparent', color: T.textMute }}><Trash2 size={18} /></button>
       </header>
@@ -216,7 +172,7 @@ export default function GSTAssistant() {
           return (
             <div key={i} style={{ display: 'flex', gap: 10, flexDirection: isUser ? 'row-reverse' : 'row' }}>
               <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: isUser ? 'rgba(22,163,74,0.12)' : 'rgba(79,70,229,0.12)' }}>
+                background: isUser ? 'rgba(124,58,237,0.25)' : 'rgba(139,92,246,0.15)' }}>
                 {isUser ? <User size={15} style={{ color: T.send }} /> : <Bot size={15} style={{ color: T.primary }} />}
               </div>
               <div style={{ maxWidth: '82%', display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', gap: 4 }}>
@@ -241,7 +197,7 @@ export default function GSTAssistant() {
         })}
         {loading && (
           <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(139,92,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Bot size={15} style={{ color: T.primary }} />
             </div>
             <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: '12px 16px' }}>
