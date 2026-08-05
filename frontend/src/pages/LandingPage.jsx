@@ -9,7 +9,9 @@ import {
 
 const supabaseUrl = 'https://qjinbmuredxreupqwoqf.supabase.co';
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Fallback mirrors lib/supabaseClient.js so the page doesn't crash at import
+// time when the anon key env var is missing (e.g. local dev without .env).
+const supabase = createClient(supabaseUrl, supabaseAnonKey || 'placeholder_anon_key');
 
 // ── Reusable Brand Logo Component ─────────────────────────────────────────────
 // Matches the SidebarLogo in Dashboard.jsx exactly.

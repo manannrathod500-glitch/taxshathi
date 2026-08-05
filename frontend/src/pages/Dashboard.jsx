@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import Reconciliation from "../components/Reconciliation";
  
 // ── QR Code canvas ─────────────────────────────────────────────────────────────
 const QRCanvas = ({ value, size = 180 }) => {
@@ -117,8 +118,46 @@ export default function Dashboard() {
   const [modal, setModal] = useState(null);
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState({ clients: 0, queries: 0, hours: 0 });
+  const [clientList, setClientList] = useState([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientForm, setClientForm] = useState({ name: "", gstin: "", phone: "", email: "" });
+  const [clientFormError, setClientFormError] = useState("");
+  const [savingClient, setSavingClient] = useState(false);
  
   const D = isDark ? dark : light;
+
+  // ── Clients list: manual entries (`clients`) + share-link entries (`ca_clients`) ──
+  // (declared before the effect below — the effect lists it as a dependency)
+  const fetchClients = useCallback(async () => {
+    if (!user) return;
+    setClientsLoading(true);
+    try {
+      const { data: manual } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("ca_user_id", user.id)
+        .order("created_at", { ascending: false });
+      const { data: linked } = await supabase
+        .from("ca_clients")
+        .select("*")
+        .eq("ca_id", user.id);
+      const manualRows = (manual || []).map((c) => ({ ...c, source: c.source || "manual" }));
+      const linkedRows = (linked || []).map((c) => ({
+        id: c.id,
+        name: c.client_name || c.name || c.phone || c.email || "Client",
+        gstin: c.gstin || null,
+        phone: c.phone || null,
+        email: c.email || null,
+        created_at: c.created_at,
+        source: "share_link",
+      }));
+      setClientList([...manualRows, ...linkedRows]);
+    } catch (err) {
+      console.error("fetchClients error:", err);
+    } finally {
+      setClientsLoading(false);
+    }
+  }, [user]);
  
   // ── fetch profile & stats ────────────────────────────────────────────────────
   useEffect(() => {
@@ -135,6 +174,11 @@ export default function Dashboard() {
         .from("ca_clients")
         .select("*", { count: "exact", head: true })
         .eq("ca_id", user.id);
+
+      const { count: manualCount } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true })
+        .eq("ca_user_id", user.id);
  
       const { count: queryCount } = await supabase
         .from("ca_queries")
@@ -142,12 +186,105 @@ export default function Dashboard() {
         .eq("ca_id", user.id);
  
       setStats({
-        clients: clientCount || 0,
+        clients: (clientCount || 0) + (manualCount || 0),
         queries: queryCount || 0,
         hours: Math.floor((queryCount || 0) * 0.5),
       });
     })();
-  }, [user]);
+    fetchClients();
+  }, [user, fetchClients]);
+ 
+  // ── Add Client (manual) ────────────────────────────────────────────────────────
+  const gstinLooksWrong =
+    clientForm.gstin.trim() !== "" &&
+    !/^[A-Za-z0-9]{15}$/.test(clientForm.gstin.trim());
+
+  const openAddClient = () => {
+    setClientForm({ name: "", gstin: "", phone: "", email: "" });
+    setClientFormError("");
+    setModal({ type: "addClient", title: "Add Client", save: "Add Client" });
+  };
+
+  const saveClient = async () => {
+    if (savingClient) return;
+    if (!clientForm.name.trim()) {
+      setClientFormError("Client name is required.");
+      return;
+    }
+    if (!clientForm.gstin.trim()) {
+      setClientFormError("GSTIN is required.");
+      return;
+    }
+    setSavingClient(true);
+    let error = null;
+    try {
+      ({ error } = await supabase.from("clients").insert([
+        {
+          ca_user_id: user.id,
+          name: clientForm.name.trim(),
+          gstin: clientForm.gstin.trim().toUpperCase(),
+          phone: clientForm.phone.trim() || null,
+          email: clientForm.email.trim() || null,
+          source: "manual",
+        },
+      ]));
+    } catch (err) {
+      error = err;
+    }
+    setSavingClient(false);
+    if (error) {
+      console.error("saveClient error:", error);
+      setClientFormError("Could not save client. Please try again.");
+      return;
+    }
+    setModal(null);
+    setStats((s) => ({ ...s, clients: s.clients + 1 }));
+    fetchClients();
+  };
+
+  const addClientField = (key, label, placeholder) => (
+    <div>
+      <div style={{ color: D.muted, fontSize: 12, marginBottom: 4 }}>
+        {label}
+        {(key === "name" || key === "gstin") && " *"}
+      </div>
+      <input
+        value={clientForm[key]}
+        placeholder={placeholder}
+        onChange={(e) => {
+          setClientForm((f) => ({ ...f, [key]: e.target.value }));
+          setClientFormError("");
+        }}
+        style={{
+          width: "100%",
+          padding: "9px 12px",
+          borderRadius: 10,
+          border: `1px solid ${D.border}`,
+          background: isDark ? "#0a0720" : "#ede9ff",
+          color: D.text,
+          fontSize: 14,
+          boxSizing: "border-box",
+        }}
+      />
+      {key === "gstin" && gstinLooksWrong && (
+        <div style={{ color: "#f59e0b", fontSize: 12, marginTop: 4 }}>
+          GSTIN looks unusual — usually 15 alphanumeric characters. You can still save.
+        </div>
+      )}
+    </div>
+  );
+
+  const AddClientBody = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {addClientField("name", "Client Name", "e.g. Shree Traders")}
+      {addClientField("gstin", "GSTIN", "15-character GSTIN")}
+      {addClientField("phone", "Phone (optional)", "e.g. 98765 43210")}
+      {addClientField("email", "Email (optional)", "client@example.com")}
+      {clientFormError && (
+        <div style={{ color: "#ef4444", fontSize: 13 }}>{clientFormError}</div>
+      )}
+    </div>
+  );
  
   const caSlug = profile?.ca_slug || user?.email?.split("@")[0] || "ca";
   const shareLink = `${window.location.origin}/ca/${caSlug}`;
@@ -200,6 +337,15 @@ export default function Dashboard() {
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V9h2v2zm0-4h-2V5h2v2zm4 4h-2V9h2v2zm0-4h-2V5h2v2zM9 11H7V9h2v2zm0-4H7V5h2v2z" />
+        </svg>
+      ),
+    },
+    {
+      id: "reconciliation",
+      label: "Reconciliation",
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7 7h10l-2.5-2.5L16 3l5 5-5 5-1.5-1.5L17 9H7V7zm10 10H7l2.5 2.5L8 21l-5-5 5-5 1.5 1.5L7 15h10v2z" />
         </svg>
       ),
     },
@@ -342,7 +488,9 @@ export default function Dashboard() {
       return (
         <div>
           <h2 style={{ color: D.text, fontSize: 22, fontWeight: 700, marginBottom: 20 }}>
-            Welcome back, {profile?.name || "CA"} 👋
+            {profile?.business_name
+              ? `Welcome back, ${profile.business_name} 👋`
+              : "Welcome back! 👋"}
           </h2>
           {/* Stats */}
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
@@ -369,6 +517,12 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+          {/* First-login helper — show only when there is no activity yet */}
+          {stats.clients === 0 && stats.queries === 0 && stats.hours === 0 && (
+            <p style={{ color: D.muted, fontSize: 13, marginTop: -12, marginBottom: 24 }}>
+              Add your first client to start seeing activity here
+            </p>
+          )}
           {/* Share link */}
           <div
             style={{
@@ -474,46 +628,157 @@ export default function Dashboard() {
       );
     }
  
+    if (activeTab === "reconciliation") {
+      return <Reconciliation D={D} isDark={isDark} clients={clientList} />;
+    }
+
     if (activeTab === "clients") {
       return (
         <div>
-          <h2 style={{ color: D.text, fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
-            Client Activity
-          </h2>
-          <p style={{ color: D.muted, fontSize: 14, marginBottom: 24 }}>
-            Clients who used your share link will appear here.
-          </p>
           <div
             style={{
-              background: D.card,
-              border: `1px solid ${D.border}`,
-              borderRadius: 14,
-              padding: "40px 20px",
-              textAlign: "center",
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 12,
+              marginBottom: 24,
             }}
           >
-            <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
-            <div style={{ color: D.text, fontWeight: 600, fontSize: 16, marginBottom: 6 }}>
-              No clients yet
-            </div>
-            <div style={{ color: D.muted, fontSize: 14, marginBottom: 20 }}>
-              Share your link with clients to get started
+            <div>
+              <h2 style={{ color: D.text, fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
+                Client Activity
+              </h2>
+              <p style={{ color: D.muted, fontSize: 14, margin: 0 }}>
+                Clients you add manually or who join via your share link appear here.
+              </p>
             </div>
             <button
-              onClick={() => setActiveTab("share")}
+              onClick={openAddClient}
               style={{
                 background: D.accent,
                 color: "#fff",
                 border: "none",
                 borderRadius: 10,
-                padding: "10px 24px",
+                padding: "10px 18px",
                 fontWeight: 700,
                 cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
-              Get Share Link
+              + Add Client
             </button>
           </div>
+
+          {clientsLoading ? (
+            <div style={{ color: D.muted, fontSize: 14, textAlign: "center", padding: "40px 0" }}>
+              Loading clients…
+            </div>
+          ) : clientList.length === 0 ? (
+            <div
+              style={{
+                background: D.card,
+                border: `1px solid ${D.border}`,
+                borderRadius: 14,
+                padding: "40px 20px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+              <div style={{ color: D.text, fontWeight: 600, fontSize: 16, marginBottom: 6 }}>
+                No clients yet
+              </div>
+              <div style={{ color: D.muted, fontSize: 14, marginBottom: 20 }}>
+                Share your link with clients to get started
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setActiveTab("share")}
+                  style={{
+                    background: D.accent,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "10px 24px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Get Share Link
+                </button>
+                <button
+                  onClick={openAddClient}
+                  style={{
+                    background: "transparent",
+                    color: D.accent,
+                    border: `1px solid ${D.accent}`,
+                    borderRadius: 10,
+                    padding: "10px 24px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  + Add Client
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {clientList.map((c) => (
+                <div
+                  key={`${c.source}-${c.id}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    background: D.card,
+                    border: `1px solid ${D.border}`,
+                    borderRadius: 12,
+                    padding: "14px 18px",
+                    marginBottom: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: "50%",
+                      background: D.accent,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: 15,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {(c.name || "C")[0].toUpperCase()}
+                  </div>
+                  <div style={{ flexGrow: 1, minWidth: 0 }}>
+                    <div style={{ color: D.text, fontWeight: 600, fontSize: 14 }}>{c.name}</div>
+                    <div style={{ color: D.muted, fontSize: 12 }}>
+                      {[c.gstin, c.phone, c.email].filter(Boolean).join(" · ") || "No contact details"}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: 20,
+                      whiteSpace: "nowrap",
+                      background: c.source === "manual" ? D.tabActiveBg : "transparent",
+                      border: `1px solid ${c.source === "manual" ? D.accent : D.border}`,
+                      color: c.source === "manual" ? D.accent : D.muted,
+                    }}
+                  >
+                    {c.source === "manual" ? "Added manually" : "Joined via link"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -1093,7 +1358,7 @@ export default function Dashboard() {
                 ×
               </button>
             </div>
-            {modal.body}
+            {modal.type === "addClient" ? AddClientBody : modal.body}
             {modal.save && (
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button
@@ -1112,7 +1377,7 @@ export default function Dashboard() {
                   Cancel
                 </button>
                 <button
-                  onClick={modal.onSave}
+                  onClick={modal.type === "addClient" ? saveClient : modal.onSave}
                   style={{
                     flex: 1,
                     padding: "11px 0",
