@@ -6,6 +6,7 @@ import {
   ArrowRight, Users, Shield, Zap, Check, MessageCircle,
   ChevronDown, Bot, TrendingUp, Globe, Sparkles, IndianRupee, Languages
 } from 'lucide-react';
+import { trackCTA, trackEvent } from '@/lib/analytics';
 
 const supabaseUrl = 'https://qjinbmuredxreupqwoqf.supabase.co';
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -271,9 +272,27 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [openFaq, setOpenFaq] = useState(null);
+  const pricingRef = useRef(null);
+
+  useEffect(() => {
+    const el = pricingRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      trackEvent('free_plan_view', { plan_name: 'Free Trial' });
+      trackEvent('paid_plan_view', { plan_name: 'Starter' });
+      trackEvent('paid_plan_view', { plan_name: 'Pro' });
+      observer.disconnect();
+    }, { threshold: 0.35 });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    trackCTA('early_access_submit', 'landing_waitlist');
     setLoading(true);
     setErrorMessage('');
     try {
@@ -301,7 +320,14 @@ export default function LandingPage() {
   const API = process.env.REACT_APP_BACKEND_URL || '';
 
   const handlePayment = async (planName, amountInINR) => {
+    trackEvent('paid_plan_selected', { plan_name: planName });
+
     if (!window.Razorpay) {
+      trackEvent('payment_failed', {
+        plan_name: planName,
+        payment_method: 'razorpay',
+        failure_stage: 'sdk_unavailable',
+      });
       alert("Razorpay SDK failed to load. Please check your internet connection.");
       return;
     }
@@ -321,11 +347,20 @@ export default function LandingPage() {
 
       if (!orderRes.ok) {
         const err = await orderRes.json().catch(() => ({}));
+        trackEvent('payment_failed', {
+          plan_name: planName,
+          payment_method: 'razorpay',
+          failure_stage: 'order_creation',
+        });
         alert(err.detail || 'Failed to create payment order. Please try again.');
         return;
       }
 
       const order = await orderRes.json();
+      trackEvent('checkout_started', {
+        plan_name: planName,
+        payment_method: 'razorpay',
+      });
 
       // Step 2: Open Razorpay Checkout with order_id
       const options = {
@@ -354,11 +389,25 @@ export default function LandingPage() {
             });
             const result = await verifyRes.json();
             if (verifyRes.ok && result.success) {
+              trackEvent('payment_success', {
+                plan_name: planName,
+                payment_method: 'razorpay',
+              });
               alert(`🎉 Payment successful!\n\nPlan: ${planName}\nPayment ID: ${response.razorpay_payment_id}\n\nYour ${planName} plan is now active!`);
             } else {
+              trackEvent('payment_failed', {
+                plan_name: planName,
+                payment_method: 'razorpay',
+                failure_stage: 'verification',
+              });
               alert("Payment received but verification failed. Please contact support.");
             }
           } catch {
+            trackEvent('payment_failed', {
+              plan_name: planName,
+              payment_method: 'razorpay',
+              failure_stage: 'verification_pending',
+            });
             alert("Payment received. Verification pending — please contact support if not activated within 24 hours.");
           }
         },
@@ -379,6 +428,11 @@ export default function LandingPage() {
 
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response) {
+        trackEvent('payment_failed', {
+          plan_name: planName,
+          payment_method: 'razorpay',
+          failure_stage: response?.error?.reason || 'checkout',
+        });
         alert(`Payment failed: ${response.error.description}\nPlease try again.`);
       });
       rzp.open();
@@ -577,12 +631,12 @@ export default function LandingPage() {
           <BrandLogo size="nav" />
         </Link>
         <div className="ts-nav-links" style={S.navLinks}>
-          <a className="ts-navlink" href="#features" style={S.navLink}>Features</a>
-          <a className="ts-navlink" href="#pricing" style={S.navLink}>Pricing</a>
+          <a className="ts-navlink" href="#features" style={S.navLink} onClick={() => trackCTA('view_features', 'landing_nav')}>Features</a>
+          <a className="ts-navlink" href="#pricing" style={S.navLink} onClick={() => trackCTA('view_pricing', 'landing_nav')}>Pricing</a>
           <a className="ts-navlink" href="#faq" style={S.navLink}>FAQ</a>
           <Link className="ts-navlink" to="/blog" style={S.navLink}>Blog</Link>
         </div>
-        <Link to="/login" style={S.navBtn} className="ts-btn-glow">Login</Link>
+        <Link to="/login" style={S.navBtn} className="ts-btn-glow" onClick={() => trackCTA('login', 'landing_nav')}>Login</Link>
       </nav>
 
       {/* ── HERO ── */}
@@ -614,8 +668,25 @@ export default function LandingPage() {
             </motion.p>
 
             <motion.div style={S.btnRow} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
-              <Link to="/register" style={S.btnPrimary} className="ts-btn-glow">Start Free — No Card Needed <ArrowRight size={15} /></Link>
-              <a href="https://wa.me/917698877447" target="_blank" rel="noreferrer" style={S.btnSecondary} className="ts-btn-glow">
+              <Link
+                to="/register"
+                style={S.btnPrimary}
+                className="ts-btn-glow"
+                onClick={() => {
+                  trackCTA('start_free', 'landing_hero');
+                  trackEvent('free_plan_selected', { plan_name: 'Free Trial' });
+                }}
+              >
+                Start Free — No Card Needed <ArrowRight size={15} />
+              </Link>
+              <a
+                href="https://wa.me/917698877447"
+                target="_blank"
+                rel="noreferrer"
+                style={S.btnSecondary}
+                className="ts-btn-glow"
+                onClick={() => trackCTA('whatsapp_us', 'landing_hero')}
+              >
                 <MessageCircle size={15} /> WhatsApp Us
               </a>
             </motion.div>
@@ -731,7 +802,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="pricing" style={{ ...S.section, background: 'rgba(139,92,246,0.03)' }}>
+      <section id="pricing" ref={pricingRef} style={{ ...S.section, background: 'rgba(139,92,246,0.03)' }}>
         <div style={S.sectionInner}>
           <Reveal>
             <div style={S.sectionLabel}>Pricing</div>
@@ -764,7 +835,15 @@ export default function LandingPage() {
                     ))}
                   </ul>
                   {plan.price === '₹0' ? (
-                    <Link to="/register" style={{ ...S.planBtn(plan.highlight), display: 'block', textAlign: 'center', textDecoration: 'none', lineHeight: '44px', padding: 0 }} className="ts-btn-glow">
+                    <Link
+                      to="/register"
+                      style={{ ...S.planBtn(plan.highlight), display: 'block', textAlign: 'center', textDecoration: 'none', lineHeight: '44px', padding: 0 }}
+                      className="ts-btn-glow"
+                      onClick={() => {
+                        trackCTA('start_free', 'landing_pricing');
+                        trackEvent('free_plan_selected', { plan_name: plan.name });
+                      }}
+                    >
                       {plan.cta}
                     </Link>
                   ) : (
@@ -847,11 +926,11 @@ export default function LandingPage() {
           </div>
           <div style={{ marginBottom: 16 }}>India's AI-powered GST & ITR assistant for CAs and businesses.</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px 32px', marginBottom: 20 }}>
-            <Link to="/login" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Login</Link>
+            <Link to="/login" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }} onClick={() => trackCTA('login', 'landing_footer')}>Login</Link>
             <Link to="/blog" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>GST Guides (Blog)</Link>
             <Link to="/privacy-policy" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Privacy Policy</Link>
             <Link to="/terms-of-service" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>Terms of Service</Link>
-            <a href="https://wa.me/917698877447" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }}>WhatsApp</a>
+            <a href="https://wa.me/917698877447" style={{ color: '#6b7280', textDecoration: 'none', fontSize: 13 }} onClick={() => trackCTA('whatsapp_us', 'landing_footer')}>WhatsApp</a>
             <span style={{ color: '#374151', fontSize: 13 }}>contact@taxsathi.online</span>
           </div>
           <div>© {new Date().getFullYear()} TaxSathi AI. All rights reserved.</div>

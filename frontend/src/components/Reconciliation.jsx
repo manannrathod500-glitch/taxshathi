@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { trackFeatureUsed } from "../lib/analytics";
 
 // ── Reconciliation workspace (Phase 1 — UI + mock data only) ─────────────────
 // Real GSTR-2B / purchase-register parsing and matching comes in Phase 2.
@@ -61,6 +62,7 @@ export default function Reconciliation({ D, isDark, clients = [] }) {
 
   const runReconciliation = () => {
     // Phase 1: mock only — simulate a short processing delay, then show sample results
+    trackFeatureUsed("reconciliation_run");
     setRunning(true);
     setTimeout(() => {
       setRunning(false);
@@ -130,7 +132,10 @@ export default function Reconciliation({ D, isDark, clients = [] }) {
           label="GSTR-2B"
           hint="Click to upload .csv or .xlsx"
           file={gstr2bFile}
-          onPick={setGstr2bFile}
+          onPick={(file) => {
+            setGstr2bFile(file);
+            if (file) trackFeatureUsed("reconciliation_gstr2b_uploaded");
+          }}
         />
         <UploadZone
           D={D}
@@ -138,7 +143,10 @@ export default function Reconciliation({ D, isDark, clients = [] }) {
           label="Purchase Register"
           hint="Click to upload .csv or .xlsx"
           file={booksFile}
-          onPick={setBooksFile}
+          onPick={(file) => {
+            setBooksFile(file);
+            if (file) trackFeatureUsed("reconciliation_books_uploaded");
+          }}
         />
       </div>
 
@@ -212,7 +220,10 @@ export default function Reconciliation({ D, isDark, clients = [] }) {
             </div>
             {/* Phase 1: present in UI, wired up in Phase 2 */}
             <button
-              onClick={() => alert("Export coming soon — report generation is part of Phase 2.")}
+              onClick={() => {
+                trackFeatureUsed("reconciliation_export_clicked");
+                alert("Export coming soon — report generation is part of Phase 2.");
+              }}
               style={{
                 background: "transparent",
                 color: D.accent,

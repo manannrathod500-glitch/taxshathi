@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Shield, Eye, EyeOff, ArrowLeft, Mail, Lock, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { trackEvent } from '@/lib/analytics';
 import toast from 'react-hot-toast';
  
 const AuthPage = ({ mode: initialMode }) => {
@@ -35,6 +36,8 @@ const AuthPage = ({ mode: initialMode }) => {
         await login(form.email, form.password);
         toast.success('Welcome back!');
       } else {
+        trackEvent('signup_started', { method: 'password' });
+        trackEvent('onboarding_started', { source: 'signup_form' });
         await register(form.name, '', '', form.email, form.password, '');
         toast.success('Account created successfully!');
       }

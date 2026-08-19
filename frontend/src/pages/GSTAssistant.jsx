@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Send, Trash2, Bot, User, Loader2, Mic, Volume2, MessageCircle } from 'lucide-react';
 import { dark as T, SPEECH_LANG, detectLang } from '@/lib/theme';
+import { trackFeatureUsed } from '@/lib/analytics';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const CA_WHATSAPP = 'https://wa.me/917698877447?text=Hi,%20I%20need%20help%20from%20a%20CA%20on%20a%20tax%20matter';
@@ -87,6 +88,7 @@ export default function GSTAssistant() {
   const sendMessage = useCallback(async (text) => {
     const userText = (text || input).trim();
     if (!userText || loading) return;
+    trackFeatureUsed('gst_assistant_question_submitted');
     const next = [...messages, { role: 'user', content: userText }];
     setMessages(next);
     setInput('');
@@ -115,6 +117,7 @@ export default function GSTAssistant() {
     if (listening) { recognitionRef.current?.stop(); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
+    trackFeatureUsed('voice_input_started');
     rec.lang = SPEECH_LANG.gu;
     rec.interimResults = false;
     rec.maxAlternatives = 1;
@@ -143,6 +146,7 @@ export default function GSTAssistant() {
 
   const resetChat = () => {
     window.speechSynthesis?.cancel();
+    trackFeatureUsed('gst_assistant_chat_reset');
     setMessages([{ role: 'assistant', content: C.greeting }]);
   };
 
@@ -222,6 +226,7 @@ export default function GSTAssistant() {
       )}
       <div style={{ padding: '0 16px 8px' }}>
         <a href={CA_WHATSAPP} target="_blank" rel="noreferrer"
+          onClick={() => trackFeatureUsed('talk_to_ca_clicked')}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13.5, fontFamily: T.fontGu, fontWeight: 700,
             color: T.send, textDecoration: 'none', border: `1px solid ${T.send}`, borderRadius: 999, padding: '7px 14px' }}>
           <MessageCircle size={15} /> {C.talkCA}

@@ -83,7 +83,7 @@ export default function PrivacyPolicy() {
   useSeo({
     title: 'Privacy Policy — TaxSathi AI',
     description:
-      'How TaxSathi AI collects, uses and protects your data: name, WhatsApp number, email, queries and client data. Processors: Supabase, Google Gemini, Resend, Razorpay.',
+      'How TaxSathi AI collects, uses and protects your data: account data, product usage, queries and client data. Processors: Supabase, Google Gemini, Resend, Razorpay, Google Analytics.',
     path: '/privacy-policy',
   });
 
@@ -92,7 +92,7 @@ export default function PrivacyPolicy() {
       <div style={S.wrap}>
         <div style={S.kicker}>Legal</div>
         <h1 style={S.h1}>Privacy Policy</h1>
-        <div style={S.updated}>Last updated: 5 August 2026</div>
+        <div style={S.updated}>Last updated: 18 August 2026</div>
         <hr style={{ border: 'none', borderTop: '1px solid rgba(139,92,246,0.15)', margin: '24px 0 28px' }} />
         <div className="ts-legal">
           <p>
@@ -106,6 +106,7 @@ export default function PrivacyPolicy() {
           <ul>
             <li><strong>Account and signup data:</strong> your full name, WhatsApp number and email address, collected through our signup and early-access forms.</li>
             <li><strong>Usage and query data:</strong> the GST/ITR questions you ask the AI assistant, the language you use (Gujarati, Hindi or English), and activity shown in your dashboard (query counts, client link usage).</li>
+            <li><strong>Website analytics data:</strong> page views and non-sensitive product events such as CTA clicks, signup steps, plan interactions and feature usage. We do not send tax documents, PAN, Aadhaar, GSTIN, bank details, passwords, payment credentials, client details or user-entered financial data to analytics.</li>
             <li><strong>Client data entered by CAs:</strong> if you are a CA or tax consultant, you may input information about your own clients (names, contact details, query history). You are responsible for having the authority to share that data with us; we process it only to provide the service to you.</li>
             <li><strong>Payment data:</strong> subscription payments are processed by Razorpay. We do not store your card, UPI or bank details on our servers; we receive only payment status and transaction references.</li>
           </ul>
@@ -122,6 +123,7 @@ export default function PrivacyPolicy() {
           <ul>
             <li><strong>Supabase</strong> — database and authentication hosting. Your account data, queries and client records are stored here.</li>
             <li><strong>Google Gemini API</strong> — AI processing. The text of your questions is sent to Google's Gemini API to generate answers.</li>
+            <li><strong>Google Analytics</strong> — website and product analytics. We use Google Analytics 4 to understand aggregate traffic, conversion funnels and feature usage without sending sensitive tax, identity, payment or client data.</li>
             <li><strong>Resend</strong> — transactional email. Your email address is used to deliver signup, onboarding and account emails.</li>
             <li><strong>Razorpay</strong> — payment processing for subscriptions. Payment details you enter at checkout go directly to Razorpay.</li>
           </ul>
@@ -137,11 +139,12 @@ export default function PrivacyPolicy() {
 
           <h2>5. Cookies and tracking</h2>
           <p>
-            We do not run advertising trackers, analytics cookies or third-party pixels on taxsathi.online.
+            We use Google Analytics 4 to measure page views, CTA clicks, signup flow progress, plan interactions,
+            checkout status and non-sensitive product feature usage. Analytics events use generic labels such as
+            plan name, page name and feature name; they must not include tax documents, PAN, Aadhaar, GSTIN, bank
+            details, payment credentials, passwords, authentication tokens, client data or user-entered financial data.
             Our authentication provider (Supabase) stores a session token in your browser's local storage so you stay
-            logged in — this is functional storage, not tracking. Razorpay's checkout may set its own cookies during
-            payment, governed by Razorpay's privacy policy. If this changes in future, we will update this page before
-            enabling any new tracking.
+            logged in. Razorpay's checkout may set its own cookies during payment, governed by Razorpay's privacy policy.
           </p>
 
           <h2>6. Data security</h2>

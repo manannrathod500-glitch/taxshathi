@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Reconciliation from "../components/Reconciliation";
+import { trackEvent, trackFeatureUsed } from "../lib/analytics";
  
 // ── QR Code canvas ─────────────────────────────────────────────────────────────
 const QRCanvas = ({ value, size = 180 }) => {
@@ -162,6 +163,16 @@ export default function Dashboard() {
   // ── fetch profile & stats ────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
+    try {
+      const activationKey = `taxsathi_activation_tracked_${user.id}`;
+      if (!window.localStorage.getItem(activationKey)) {
+        trackEvent("onboarding_completed", { source: "dashboard_first_load" });
+        trackEvent("product_activated", { activation_type: "dashboard_first_load" });
+        window.localStorage.setItem(activationKey, "1");
+      }
+    } catch {
+      trackEvent("product_activated", { activation_type: "dashboard_load" });
+    }
     (async () => {
       const { data } = await supabase
         .from("profiles")
@@ -239,6 +250,7 @@ export default function Dashboard() {
     }
     setModal(null);
     setStats((s) => ({ ...s, clients: s.clients + 1 }));
+    trackFeatureUsed("client_added");
     fetchClients();
   };
 
@@ -291,10 +303,17 @@ export default function Dashboard() {
  
   // ── WhatsApp share ───────────────────────────────────────────────────────────
   const shareOnWhatsApp = () => {
+    trackFeatureUsed("client_link_shared_whatsapp");
     const msg = encodeURIComponent(
       `🙏 Namaste! Maro naam ${profile?.name || "CA"} che.\n\nTamara GST / ITR sawalo mate aa AI Assistant use karo — Gujarati, Hindi, English ma 24/7 jawab aapo che.\n\n👉 ${shareLink}`
     );
     window.open(`https://wa.me/?text=${msg}`, "_blank");
+  };
+
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(shareLink);
+    trackFeatureUsed("client_link_copied");
+    alert("Link copied!");
   };
  
   // ── Logout ────────────────────────────────────────────────────────────────────
@@ -461,6 +480,11 @@ export default function Dashboard() {
               </div>
             ))}
             <button
+              onClick={() => {
+                if (!plan.current) {
+                  trackEvent("paid_plan_selected", { plan_name: plan.name });
+                }
+              }}
               style={{
                 marginTop: 16,
                 width: "100%",
@@ -481,6 +505,17 @@ export default function Dashboard() {
       </div>
     </div>
   );
+
+  const openPlanModal = () => {
+    trackEvent("free_plan_view", { plan_name: "Free Trial" });
+    trackEvent("paid_plan_view", { plan_name: "Starter" });
+    trackEvent("paid_plan_view", { plan_name: "Pro" });
+    setModal({
+      title: "Upgrade Plan",
+      body: <PlansContent />,
+      save: null,
+    });
+  };
  
   // ── Tab content ────────────────────────────────────────────────────────────────
   const renderContent = () => {
@@ -552,10 +587,7 @@ export default function Dashboard() {
                 {shareLink}
               </span>
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(shareLink);
-                  alert("Link copied!");
-                }}
+                onClick={copyShareLink}
                 style={{
                   background: D.accent,
                   color: "#fff",
@@ -819,10 +851,7 @@ export default function Dashboard() {
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareLink);
-                    alert("Link copied!");
-                  }}
+                  onClick={copyShareLink}
                   style={{
                     flex: 1,
                     padding: "10px 0",
@@ -889,6 +918,7 @@ export default function Dashboard() {
                   a.download = "taxsathi-qr.png";
                   a.href = canvas.toDataURL();
                   a.click();
+                  trackFeatureUsed("client_qr_downloaded");
                 }}
                 style={{
                   width: "100%",
@@ -936,13 +966,7 @@ export default function Dashboard() {
               </div>
             </div>
             <button
-              onClick={() =>
-                setModal({
-                  title: "Upgrade Plan",
-                  body: <PlansContent />,
-                  save: null,
-                })
-              }
+              onClick={openPlanModal}
               style={{
                 background: "#fff",
                 color: D.accentDark,

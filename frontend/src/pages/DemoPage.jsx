@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Send, Zap, RotateCcw, ChevronDown } from 'lucide-react';
+import { trackFeatureUsed } from '@/lib/analytics';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -38,6 +39,7 @@ export default function DemoPage() {
   const sendMessage = async (text) => {
     const msg = text || input.trim();
     if (!msg || loading) return;
+    trackFeatureUsed('demo_question_submitted');
     setInput('');
     setShowSuggestions(false);
     setMessages(prev => [...prev, { role: 'user', text: msg, ts: new Date() }]);
@@ -54,6 +56,7 @@ export default function DemoPage() {
   };
 
   const reset = () => {
+    trackFeatureUsed('demo_reset');
     setMessages([]);
     setSessionId(`demo_${Date.now()}`);
     setShowSuggestions(true);

@@ -15,6 +15,7 @@ import { BlogIndex, BlogPost } from '@/pages/BlogPage';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfService from '@/pages/TermsOfService';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { trackPageView } from '@/lib/analytics';
 import '@/App.css';
 
 const useScrollReveal = () => {
@@ -38,27 +39,40 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const RouteAnalytics = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+
+  return null;
+};
+
 function AppWithReveal() {
   useScrollReveal();
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/demo" element={<DemoPage />} />
-      <Route path="/analyzer" element={<ModuleAnalyzer />} />
-      <Route path="/progress" element={<ProgressTracker />} />
-      <Route path="/ca/:slug" element={<CAPublicChat />} />
-      <Route path="/home" element={<ProtectedRoute><OwnerHome /></ProtectedRoute>} />
-      <Route path="/blog" element={<BlogIndex />} />
-      <Route path="/blog/:slug" element={<BlogPost />} />
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-      <Route path="/terms-of-service" element={<TermsOfService />} />
-      <Route path="/login" element={<AuthPage mode="login" />} />
-      <Route path="/register" element={<AuthPage mode="register" />} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/gst-assistant" element={<ProtectedRoute><GSTAssistant /></ProtectedRoute>} />
-      <Route path="/invoice" element={<ProtectedRoute><InvoiceEngine /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <RouteAnalytics />
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/demo" element={<DemoPage />} />
+        <Route path="/analyzer" element={<ModuleAnalyzer />} />
+        <Route path="/progress" element={<ProgressTracker />} />
+        <Route path="/ca/:slug" element={<CAPublicChat />} />
+        <Route path="/home" element={<ProtectedRoute><OwnerHome /></ProtectedRoute>} />
+        <Route path="/blog" element={<BlogIndex />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/register" element={<AuthPage mode="register" />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/gst-assistant" element={<ProtectedRoute><GSTAssistant /></ProtectedRoute>} />
+        <Route path="/invoice" element={<ProtectedRoute><InvoiceEngine /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
 

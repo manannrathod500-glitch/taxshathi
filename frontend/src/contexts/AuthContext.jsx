@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { trackEvent } from '../lib/analytics';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
@@ -60,6 +61,7 @@ export const AuthProvider = ({ children }) => {
       password,
     });
     if (error) throw error;
+    trackEvent('login', { method: 'password' });
     return data;
   };
 
@@ -79,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     });
     
     if (error) throw error;
+    trackEvent('signup_completed', { method: 'password' });
     
     // Insert into profiles if signup successful
     if (data?.user) {
