@@ -69,8 +69,10 @@ export const initializeAnalytics = () => {
     window.gtag = gtag;
   }
 
-  const existing = document.querySelector(`script[src*="${GA_MEASUREMENT_ID}"]`);
-  if (!existing) {
+  // If GA is already loaded from the <head> snippet, just set config;
+  // otherwise fall back to injecting the script dynamically.
+  const existingScript = document.querySelector(`script[src*="googletagmanager.com/gtag/js"]`);
+  if (!existingScript) {
     const script = document.createElement('script');
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;

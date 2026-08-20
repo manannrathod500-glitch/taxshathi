@@ -144,7 +144,18 @@
     ═══════════════════════════════════════════════════════════════ -->
     <link rel="apple-touch-icon" sizes="192x192" href="%PUBLIC_URL%/favicon-192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
- 
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         GOOGLE ANALYTICS 4 — loaded in <head> so it tracks every visit
+    ═══════════════════════════════════════════════════════════════ -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MN734C17SF"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-MN734C17SF', { send_page_view: true });
+    </script>
+
     <!-- ═══════════════════════════════════════════════════════════════
          FONTS
     ═══════════════════════════════════════════════════════════════ -->
