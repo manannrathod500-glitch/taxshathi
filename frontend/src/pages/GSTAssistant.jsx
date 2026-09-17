@@ -4,7 +4,7 @@ import { ArrowLeft, Send, Trash2, Bot, User, Loader2, Mic, Volume2, MessageCircl
 import { dark as T, SPEECH_LANG, detectLang } from '@/lib/theme';
 import { trackFeatureUsed } from '@/lib/analytics';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ''}/api`;
 const CA_WHATSAPP = 'https://wa.me/917698877447?text=Hi,%20I%20need%20help%20from%20a%20CA%20on%20a%20tax%20matter';
 
 // ── UI copy (Gujarati-first — that's the brand promise). Reply language is not

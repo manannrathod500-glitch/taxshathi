@@ -10,11 +10,11 @@ export default function CAPublicChat() {
   useEffect(() => {
     supabase
       .from('profiles')
-      .select('full_name')
+      .select('name')
       .eq('ca_slug', slug)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.full_name) setCaName(data.full_name);
+        if (data?.name) setCaName(data.name);
       });
   }, [slug]);
 
