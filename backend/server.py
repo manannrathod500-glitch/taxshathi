@@ -68,8 +68,29 @@ app = FastAPI(title="TaxSathi AI API")
 api_router = APIRouter(prefix="/api")
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 ADMIN_API_KEY = os.environ.get('ADMIN_API_KEY', '')
+
+# ── OPENROUTER (free models, multi-key rotation) ────────────────────────────
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODELS = [
+    os.environ.get('OPENROUTER_MODEL', 'nvidia/nemotron-3-super-120b-a12b:free'),
+    'google/gemma-4-31b-it:free',
+    'openrouter/free',
+]
+OPENROUTER_MAX_ATTEMPTS = 8
+
+
+def get_openrouter_keys() -> List[str]:
+    """Collect OpenRouter keys from OPENROUTER_KEYS (comma/space separated) or
+    numbered OPENROUTER_KEY_1..N env vars. Returns [] when none are configured."""
+    raw = os.environ.get('OPENROUTER_KEYS', '') or os.environ.get('OPENROUTER_API_KEYS', '')
+    keys = [k.strip() for k in raw.replace(',', ' ').replace(';', ' ').split() if k.strip()]
+    if not keys:
+        for i in range(1, 26):
+            k = os.environ.get(f'OPENROUTER_KEY_{i}')
+            if k and k.strip():
+                keys.append(k.strip())
+    return keys
 
 
 def require_admin(x_admin_key: Optional[str]):
@@ -424,7 +445,7 @@ Order message:
     return _gemini_json(prompt, temperature=0.2)
 
 
-# ── TAX ASSISTANT CHAT (DeepSeek, server-side) ──────────────────────────────
+# ── TAX ASSISTANT CHAT (OpenRouter free models, server-side) ────────────────
 ASSISTANT_SYSTEM_PROMPT = """You are TaxSathi AI — an expert Indian tax assistant. You help Indian CAs, tax professionals, and SMB owners with:
 - GST (Goods and Services Tax) questions
 - ITR (Income Tax Return) filing
@@ -448,39 +469,76 @@ class AssistantChatRequest(BaseModel):
 
 @api_router.post("/chat/assistant")
 async def assistant_chat(data: AssistantChatRequest):
-    if not DEEPSEEK_API_KEY:
-        raise HTTPException(status_code=500, detail="DEEPSEEK_API_KEY not configured on server")
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "system", "content": ASSISTANT_SYSTEM_PROMPT},
-            *[{"role": m.role, "content": m.content} for m in data.messages],
-        ],
-        "max_tokens": 1000,
-        "temperature": 0.7,
-    }
+    keys = get_openrouter_keys()
+    if not keys:
+        raise HTTPException(status_code=500, detail="No OpenRouter keys configured on server")
+
+    chat_messages = [
+        {"role": "system", "content": ASSISTANT_SYSTEM_PROMPT},
+        *[{"role": m.role, "content": m.content} for m in data.messages],
+    ]
+
+    # Rotate the starting key so load spreads across all keys, then build the
+    # (key, model) attempts: for each key try the model list in order until one
+    # answers. Only message.content is returned — reasoning is a separate field.
+    import random
+    start = random.randrange(len(keys))
+    ordered_keys = [keys[(start + i) % len(keys)] for i in range(len(keys))]
+    attempts = []
+    for key in ordered_keys:
+        for model in OPENROUTER_MODELS:
+            attempts.append((key, model))
+    attempts = attempts[:OPENROUTER_MAX_ATTEMPTS]
 
     def _call():
-        return requests.post(
-            "https://api.deepseek.com/chat/completions",
-            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
-            json=payload,
-            timeout=45,
-        )
+        last_error = "AI service error"
+        disabled_keys = set()
+        for key, model in attempts:
+            if key in disabled_keys:
+                continue
+            payload = {
+                "model": model,
+                "messages": chat_messages,
+                "max_tokens": 1400,
+                "temperature": 0.7,
+                # Free models like Nemotron 3 Super are reasoning models; disabling
+                # reasoning makes them answer directly (~1-4s) with clean content.
+                "reasoning": {"enabled": False},
+            }
+            try:
+                r = requests.post(
+                    OPENROUTER_URL,
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://taxsathi.in",
+                        "X-Title": "TaxSathi",
+                    },
+                    json=payload,
+                    timeout=30,
+                )
+            except requests.RequestException as e:
+                last_error = f"OpenRouter network error: {e}"
+                continue
+            if not r.ok:
+                logger.error(f"OpenRouter error {r.status_code} (model={model}, key=...{key[-4:]}): {r.text[:200]}")
+                last_error = "AI service error"
+                if r.status_code == 401:
+                    disabled_keys.add(key)
+                continue
+            try:
+                reply = r.json()["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError, ValueError):
+                last_error = "Malformed OpenRouter response"
+                continue
+            if reply and reply.strip():
+                return reply.strip()
+            logger.error(f"Empty OpenRouter content (model={model}, key=...{key[-4:]})")
+        raise HTTPException(status_code=502, detail=last_error)
 
     import asyncio
     loop = asyncio.get_event_loop()
-    try:
-        r = await loop.run_in_executor(None, _call)
-    except requests.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"DeepSeek network error: {e}")
-    if not r.ok:
-        logger.error(f"DeepSeek error {r.status_code}: {r.text[:300]}")
-        raise HTTPException(status_code=502, detail="AI service error")
-    try:
-        reply = r.json()["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, ValueError) as e:
-        raise HTTPException(status_code=502, detail=f"Malformed DeepSeek response: {e}")
+    reply = await loop.run_in_executor(None, _call)
     return {"reply": reply}
 
 
