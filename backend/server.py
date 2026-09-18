@@ -79,6 +79,16 @@ OPENROUTER_MODELS = [
 ]
 OPENROUTER_MAX_ATTEMPTS = 8
 
+# ── SARVAM AI (fallback provider, Indian models) ────────────────────────────
+# sarvam-105b is a reasoning model; reasoning_effort=None disables the hidden
+# chain-of-thought (the string "none" is rejected with a 400).
+SARVAM_URL = "https://api.sarvam.ai/v1/chat/completions"
+SARVAM_API_KEY = os.environ.get('SARVAM_API_KEY', '')
+SARVAM_MODELS = [
+    {"model": "sarvam-105b", "reasoning_effort": None},
+    {"model": "sarvam-105b-conversations"},
+]
+
 
 def get_openrouter_keys() -> List[str]:
     """Collect OpenRouter keys from OPENROUTER_KEYS (comma/space separated) or
@@ -495,8 +505,8 @@ class AssistantChatRequest(BaseModel):
 @api_router.post("/chat/assistant")
 async def assistant_chat(data: AssistantChatRequest):
     keys = get_openrouter_keys()
-    if not keys:
-        raise HTTPException(status_code=500, detail="No OpenRouter keys configured on server")
+    if not keys and not SARVAM_API_KEY:
+        raise HTTPException(status_code=500, detail="No AI provider configured on server")
 
     chat_messages = [
         {"role": "system", "content": ASSISTANT_SYSTEM_PROMPT},
@@ -564,6 +574,42 @@ async def assistant_chat(data: AssistantChatRequest):
             if reply and reply.strip() and not looks_degenerate(reply):
                 return {"reply": reply.strip()}
             logger.error(f"Bad OpenRouter content (model={model}, key=...{key[-4:]})")
+        if SARVAM_API_KEY:
+            for cfg in SARVAM_MODELS:
+                payload = {
+                    "model": cfg["model"],
+                    "messages": chat_messages,
+                    "max_tokens": 1000,
+                    "temperature": 0.5,
+                    "frequency_penalty": 0.4,
+                }
+                if "reasoning_effort" in cfg:
+                    payload["reasoning_effort"] = cfg["reasoning_effort"]
+                try:
+                    r = requests.post(
+                        SARVAM_URL,
+                        headers={
+                            "Authorization": f"Bearer {SARVAM_API_KEY}",
+                            "Content-Type": "application/json",
+                        },
+                        json=payload,
+                        timeout=30,
+                    )
+                except requests.RequestException as e:
+                    logger.error(f"Sarvam network error: {e}")
+                    continue
+                if not r.ok:
+                    logger.error(f"Sarvam error {r.status_code} (model={cfg['model']}): {r.text[:200]}")
+                    if r.status_code in (429, 402):
+                        rate_limited = True
+                    continue
+                try:
+                    reply = r.json()["choices"][0]["message"]["content"]
+                except (KeyError, IndexError, TypeError, ValueError):
+                    continue
+                if reply and reply.strip() and not looks_degenerate(reply):
+                    return {"reply": reply.strip()}
+                logger.error(f"Bad Sarvam content (model={cfg['model']})")
         if rate_limited:
             return {"reply": credit_message(last_user), "credits_exhausted": True}
         raise HTTPException(status_code=502, detail=last_error)

@@ -11,6 +11,7 @@
 //   OR numbered: OPENROUTER_KEY_1, OPENROUTER_KEY_2, ... OPENROUTER_KEY_N
 // Optional:
 //   OPENROUTER_MODEL = override the primary model id (default below)
+//   SARVAM_API_KEY   = Sarvam AI key; used as a fallback (Indian languages)
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -21,6 +22,16 @@ const MODELS = [
   'google/gemma-4-31b-it:free',
   'openrouter/free',
 ].filter((m, i, a) => m && a.indexOf(m) === i);
+
+// Fallback provider: Sarvam AI (Indian models, best for Gujarati/Hindi).
+// `sarvam-105b` is a reasoning model; reasoning_effort: null disables the
+// hidden chain-of-thought (the string "none" is rejected with a 400).
+const SARVAM_URL = 'https://api.sarvam.ai/v1/chat/completions';
+const SARVAM_KEY = (process.env.SARVAM_API_KEY || '').trim();
+const SARVAM_MODELS = [
+  { model: 'sarvam-105b', noReasoning: true },
+  { model: 'sarvam-105b-conversations' },
+];
 
 const MAX_ATTEMPTS = 8;
 const PER_ATTEMPT_TIMEOUT_MS = 25000;
@@ -92,8 +103,8 @@ module.exports = async function handler(req, res) {
   }
 
   const keys = getKeys();
-  if (keys.length === 0) {
-    return res.status(500).json({ detail: 'No OpenRouter keys configured on server' });
+  if (keys.length === 0 && !SARVAM_KEY) {
+    return res.status(500).json({ detail: 'No AI provider configured on server' });
   }
 
   // Vercel parses JSON bodies automatically, but guard for string bodies too.
@@ -197,6 +208,54 @@ module.exports = async function handler(req, res) {
         lastError = 'AI service network error';
       }
       console.error('Assistant attempt failed:', (e && e.message) || e);
+    }
+  }
+
+  // Fallback provider: Sarvam AI (free credits), only reached when the free
+  // OpenRouter models above are all rate-limited / unavailable.
+  if (SARVAM_KEY) {
+    for (const cfg of SARVAM_MODELS) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 1000) break;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), Math.min(PER_ATTEMPT_TIMEOUT_MS, remaining));
+      try {
+        const r = await fetch(SARVAM_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${SARVAM_KEY}`,
+          },
+          body: JSON.stringify({
+            model: cfg.model,
+            ...(cfg.noReasoning ? { reasoning_effort: null } : {}),
+            messages: chatMessages,
+            max_tokens: 1000,
+            temperature: 0.5,
+            frequency_penalty: 0.4,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (!r.ok) {
+          const text = await r.text().catch(() => '');
+          console.error(`Sarvam ${r.status} (model=${cfg.model}): ${text.slice(0, 200)}`);
+          if (r.status === 429 || r.status === 402) rateLimited = true;
+          continue;
+        }
+
+        const data = await r.json();
+        const reply = data?.choices?.[0]?.message?.content;
+        if (reply && String(reply).trim() && !looksDegenerate(reply)) {
+          return res.status(200).json({ reply: String(reply).trim() });
+        }
+        console.error(`Bad Sarvam content (model=${cfg.model})`);
+      } catch (e) {
+        clearTimeout(timeout);
+        console.error('Sarvam attempt failed:', (e && e.message) || e);
+      }
     }
   }
 
