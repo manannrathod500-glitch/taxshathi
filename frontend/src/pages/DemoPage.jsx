@@ -4,7 +4,7 @@ import axios from 'axios';
 import { ArrowLeft, Send, Zap, RotateCcw, ChevronDown } from 'lucide-react';
 import { trackFeatureUsed } from '@/lib/analytics';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ''}/api`;
 
 const SUGGESTED = [
   'How do I file GSTR-3B for a textile business in Surat?',
@@ -45,8 +45,11 @@ export default function DemoPage() {
     setMessages(prev => [...prev, { role: 'user', text: msg, ts: new Date() }]);
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/chat/demo`, { message: msg, session_id: sessionId });
-      setMessages(prev => [...prev, { role: 'ai', text: res.data.response, ts: new Date() }]);
+      // Reuse the same-origin Vercel function as GSTAssistant (api/chat/assistant).
+      const history = [...messages, { role: 'user', text: msg }]
+        .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
+      const res = await axios.post(`${API}/chat/assistant`, { messages: history });
+      setMessages(prev => [...prev, { role: 'ai', text: res.data.reply || 'Connection error. Please try again.', ts: new Date(), error: !res.data.reply }]);
     } catch {
       setMessages(prev => [...prev, { role: 'ai', text: 'Connection error. Please try again.', ts: new Date(), error: true }]);
     } finally {
