@@ -93,6 +93,19 @@ def get_openrouter_keys() -> List[str]:
     return keys
 
 
+def looks_degenerate(text: str) -> bool:
+    """Detect repetition loops from weak free models so we can retry."""
+    lines = [ln.strip() for ln in str(text).splitlines() if len(ln.strip()) > 15]
+    if len(lines) < 6:
+        return False
+    counts: Dict[str, int] = {}
+    for ln in lines:
+        counts[ln] = counts.get(ln, 0) + 1
+        if counts[ln] >= 4:
+            return True
+    return False
+
+
 def require_admin(x_admin_key: Optional[str]):
     """Deny access unless a valid admin key is supplied."""
     if not ADMIN_API_KEY or not x_admin_key or not hmac.compare_digest(x_admin_key, ADMIN_API_KEY):
@@ -455,7 +468,9 @@ ASSISTANT_SYSTEM_PROMPT = """You are TaxSathi AI — an expert Indian tax assist
 
 You respond in the same language the user writes in — Hindi, Gujarati, or English.
 If asked anything unrelated to Indian tax/finance, politely say: "Main sirf GST, ITR aur Indian tax ke sawaalon mein madad kar sakta hoon."
-Keep answers clear, practical, and concise."""
+Keep answers clear, practical, and concise.
+
+Reply with the final answer only. Do not show your reasoning or internal analysis, and never repeat the same sentence or point twice."""
 
 
 class AssistantMessage(BaseModel):
@@ -499,8 +514,9 @@ async def assistant_chat(data: AssistantChatRequest):
             payload = {
                 "model": model,
                 "messages": chat_messages,
-                "max_tokens": 1400,
-                "temperature": 0.7,
+                "max_tokens": 1000,
+                "temperature": 0.5,
+                "frequency_penalty": 0.4,
                 # Free models like Nemotron 3 Super are reasoning models; disabling
                 # reasoning makes them answer directly (~1-4s) with clean content.
                 "reasoning": {"enabled": False},
@@ -531,9 +547,9 @@ async def assistant_chat(data: AssistantChatRequest):
             except (KeyError, IndexError, TypeError, ValueError):
                 last_error = "Malformed OpenRouter response"
                 continue
-            if reply and reply.strip():
+            if reply and reply.strip() and not looks_degenerate(reply):
                 return reply.strip()
-            logger.error(f"Empty OpenRouter content (model={model}, key=...{key[-4:]})")
+            logger.error(f"Bad OpenRouter content (model={model}, key=...{key[-4:]})")
         raise HTTPException(status_code=502, detail=last_error)
 
     import asyncio

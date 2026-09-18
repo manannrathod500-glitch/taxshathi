@@ -37,7 +37,25 @@ You respond in the same language the user writes in — Hindi, Gujarati, or Engl
 If asked anything unrelated to Indian tax/finance, politely say: "Main sirf GST, ITR aur Indian tax ke sawaalon mein madad kar sakta hoon."
 Keep answers clear, practical, and concise.
 
-Important limitation: You provide general information, not professional advice. For complex, high-value, or case-specific matters (notices, disputes, large refunds, registrations), tell the user to confirm with a qualified CA before acting. Never invent figures, due dates, or section numbers — if you are unsure, say so plainly.`;
+Important limitation: You provide general information, not professional advice. For complex, high-value, or case-specific matters (notices, disputes, large refunds, registrations), tell the user to confirm with a qualified CA before acting. Never invent figures, due dates, or section numbers — if you are unsure, say so plainly.
+
+Reply with the final answer only. Do not show your reasoning or internal analysis, and never repeat the same sentence or point twice.`;
+
+// Reject degenerate outputs (repetition loops) so we retry on another model.
+function looksDegenerate(text) {
+  const lines = String(text)
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 15);
+  if (lines.length < 6) return false;
+  const counts = new Map();
+  for (const l of lines) {
+    const c = (counts.get(l) || 0) + 1;
+    if (c >= 4) return true;
+    counts.set(l, c);
+  }
+  return false;
+}
 
 function getKeys() {
   const raw = process.env.OPENROUTER_KEYS || process.env.OPENROUTER_API_KEYS || '';
@@ -125,8 +143,9 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           model,
           messages: chatMessages,
-          max_tokens: 1400,
-          temperature: 0.7,
+          max_tokens: 1000,
+          temperature: 0.5,
+          frequency_penalty: 0.4,
           // Free models like Nemotron 3 Super are reasoning models. Disabling
           // reasoning makes them answer directly: ~1-4s, clean message.content,
           // and no risk of the token budget being eaten by hidden reasoning.
@@ -147,13 +166,13 @@ module.exports = async function handler(req, res) {
 
       const data = await r.json();
       const reply = data?.choices?.[0]?.message?.content;
-      if (reply && String(reply).trim()) {
+      if (reply && String(reply).trim() && !looksDegenerate(reply)) {
         return res.status(200).json({ reply: String(reply).trim() });
       }
 
-      // Empty content (reasoning consumed the budget, etc.) — try the next attempt.
+      // Empty or looping output — try the next attempt.
       lastError = 'AI service error';
-      console.error(`Empty OpenRouter content (model=${model}, key=...${key.slice(-4)})`);
+      console.error(`Bad OpenRouter content (model=${model}, key=...${key.slice(-4)}, degenerate=${looksDegenerate(reply || '')})`);
     } catch (e) {
       clearTimeout(timeout);
       if (e && e.name === 'AbortError') {
