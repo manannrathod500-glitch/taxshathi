@@ -511,7 +511,7 @@ async def assistant_chat(data: AssistantChatRequest):
                     headers={
                         "Authorization": f"Bearer {key}",
                         "Content-Type": "application/json",
-                        "HTTP-Referer": "https://taxsathi.in",
+                        "HTTP-Referer": "https://taxsathi.online",
                         "X-Title": "TaxSathi",
                     },
                     json=payload,

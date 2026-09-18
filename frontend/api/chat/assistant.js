@@ -119,7 +119,7 @@ module.exports = async function handler(req, res) {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${key}`,
-          'HTTP-Referer': 'https://taxsathi.in',
+          'HTTP-Referer': 'https://taxsathi.online',
           'X-Title': 'TaxSathi',
         },
         body: JSON.stringify({
