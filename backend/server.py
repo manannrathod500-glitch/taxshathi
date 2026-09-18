@@ -106,6 +106,16 @@ def looks_degenerate(text: str) -> bool:
     return False
 
 
+def credit_message(sample: str) -> str:
+    """Friendly 'out of AI credits' message in the user's language."""
+    s = str(sample or "")
+    if any('\u0a80' <= ch <= '\u0aff' for ch in s):
+        return 'ક્ષમા કરો 🙏 — આજ માટે અમારા AI ક્રેડિટ પૂરા થઈ ગયા છે. કૃપા કરીને થોડા સમય પછી ફરી પ્રયત્ન કરો.'
+    if any('\u0900' <= ch <= '\u097f' for ch in s):
+        return 'क्षमा करें 🙏 — आज के लिए हमारा AI क्रेडिट ख़त्म हो गया है। कृपया थोड़ी देर बाद दोबारा कोशिश करें।'
+    return "Sorry 🙏 — we're out of AI credits for today. Please try again a little later."
+
+
 def require_admin(x_admin_key: Optional[str]):
     """Deny access unless a valid admin key is supplied."""
     if not ADMIN_API_KEY or not x_admin_key or not hmac.compare_digest(x_admin_key, ADMIN_API_KEY):
@@ -492,6 +502,7 @@ async def assistant_chat(data: AssistantChatRequest):
         {"role": "system", "content": ASSISTANT_SYSTEM_PROMPT},
         *[{"role": m.role, "content": m.content} for m in data.messages],
     ]
+    last_user = next((m.content for m in reversed(data.messages) if m.role == 'user'), "")
 
     # Rotate the starting key so load spreads across all keys, then build the
     # (key, model) attempts: for each key try the model list in order until one
@@ -507,6 +518,7 @@ async def assistant_chat(data: AssistantChatRequest):
 
     def _call():
         last_error = "AI service error"
+        rate_limited = False
         disabled_keys = set()
         for key, model in attempts:
             if key in disabled_keys:
@@ -541,6 +553,8 @@ async def assistant_chat(data: AssistantChatRequest):
                 last_error = "AI service error"
                 if r.status_code == 401:
                     disabled_keys.add(key)
+                if r.status_code in (429, 402):
+                    rate_limited = True
                 continue
             try:
                 reply = r.json()["choices"][0]["message"]["content"]
@@ -548,14 +562,15 @@ async def assistant_chat(data: AssistantChatRequest):
                 last_error = "Malformed OpenRouter response"
                 continue
             if reply and reply.strip() and not looks_degenerate(reply):
-                return reply.strip()
+                return {"reply": reply.strip()}
             logger.error(f"Bad OpenRouter content (model={model}, key=...{key[-4:]})")
+        if rate_limited:
+            return {"reply": credit_message(last_user), "credits_exhausted": True}
         raise HTTPException(status_code=502, detail=last_error)
 
     import asyncio
     loop = asyncio.get_event_loop()
-    reply = await loop.run_in_executor(None, _call)
-    return {"reply": reply}
+    return await loop.run_in_executor(None, _call)
 
 
 # ── RAZORPAY PAYMENTS ────────────────────────────────────────────────────────

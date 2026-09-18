@@ -73,6 +73,18 @@ function getKeys() {
   return keys;
 }
 
+// Friendly "out of AI credits" message, in the user's language.
+function creditMessage(sample) {
+  const s = String(sample || '');
+  if (/[\u0A80-\u0AFF]/.test(s)) {
+    return 'ક્ષમા કરો 🙏 — આજ માટે અમારા AI ક્રેડિટ પૂરા થઈ ગયા છે. કૃપા કરીને થોડા સમય પછી ફરી પ્રયત્ન કરો.';
+  }
+  if (/[\u0900-\u097F]/.test(s)) {
+    return 'क्षमा करें 🙏 — आज के लिए हमारा AI क्रेडिट ख़त्म हो गया है। कृपया थोड़ी देर बाद दोबारा कोशिश करें।';
+  }
+  return "Sorry 🙏 — we're out of AI credits for today. Please try again a little later.";
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -121,6 +133,7 @@ module.exports = async function handler(req, res) {
 
   const deadline = Date.now() + TOTAL_BUDGET_MS;
   let lastError = 'AI service error';
+  let rateLimited = false;
   const disabledKeys = new Set();
 
   for (const { key, model } of attempts) {
@@ -161,6 +174,9 @@ module.exports = async function handler(req, res) {
         console.error(`OpenRouter ${r.status} (model=${model}, key=...${key.slice(-4)}): ${text.slice(0, 200)}`);
         // A 401 means the key itself is bad — stop using it for the rest of the request.
         if (r.status === 401) disabledKeys.add(key);
+        // 429 (rate limit / daily free limit) and 402 (payment required) mean we
+        // are out of free capacity for now.
+        if (r.status === 429 || r.status === 402) rateLimited = true;
         continue;
       }
 
@@ -182,6 +198,13 @@ module.exports = async function handler(req, res) {
       }
       console.error('Assistant attempt failed:', (e && e.message) || e);
     }
+  }
+
+  // All attempts failed. If the cause was rate limiting / exhausted free quota,
+  // tell the user in their own language instead of a generic error.
+  if (rateLimited) {
+    const lastUser = [...cleaned].reverse().find((m) => m.role === 'user');
+    return res.status(200).json({ reply: creditMessage(lastUser && lastUser.content), credits_exhausted: true });
   }
 
   return res.status(502).json({ detail: lastError });
